@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADFS PROPS — Pilot</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#0e1116; color:#e6e9ee; margin:0; }
+  header { padding:20px 16px 8px; max-width:1200px; margin:0 auto; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:.5px; }
+  .sub { color:#9aa4b2; font-size:14px; }
+  .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
+  .tabs button, select, input[type=search] { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  .tabs button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+  label { font-size:13px; color:#9aa4b2; }
+  main { max-width:1200px; margin:0 auto; padding:0 16px 24px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { padding:6px 8px; border-bottom:1px solid #232a34; text-align:left; white-space:nowrap; }
+  th { cursor:pointer; user-select:none; position:sticky; top:0; background:#141922; }
+  th:hover { color:#7db4ff; }
+  th .dir { font-size:10px; color:#7db4ff; }
+  td.num, th.num { text-align:right; }
+  .score { font-weight:600; border-radius:4px; }
+  .more { color:#4ade80; } .less { color:#f87171; }
+  .scen { color:#ffd75e; font-size:12px; }
+  footer { max-width:1200px; margin:0 auto; padding:0 16px 32px; color:#9aa4b2; font-size:13px; line-height:1.5; }
+  footer a { color:#7db4ff; }
+  .count { color:#9aa4b2; font-size:13px; margin:6px 0; }
+  #calendar { margin:12px 0 2px; }
+  .cal-month { display:inline-block; vertical-align:top; margin:0 18px 8px 0; }
+  .cal-month h3 { margin:4px 0 6px; font-size:15px; }
+  table.cal { border-collapse:collapse; width:auto; font-size:12px; }
+  table.cal th, table.cal td { border:1px solid #232a34; padding:4px 5px; text-align:center; min-width:46px; }
+  table.cal td.off { color:#39424e; }
+  table.cal a { color:#7db4ff; text-decoration:none; font-weight:700; font-size:14px; }
+  .cal-rec { font-size:10px; color:#9aa4b2; white-space:nowrap; }
+  .hit { color:#4ade80; font-weight:700; } .miss { color:#f87171; font-weight:700; }
+  .push { color:#9aa4b2; font-weight:700; } .dnp { color:#5b6572; font-weight:700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ADFS PROPS</h1>
+  <div class="sub" id="meta"></div>
+  <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
+  <div class="controls">
+    <span class="tabs" id="siteTabs"></span>
+    <select id="marketSel"></select>
+    <input type="search" id="q" placeholder="Search player or matchup">
+    <label>Min confidence <input type="range" id="minConf" min="0" max="85" step="5" value="0"> <span id="minConfVal">0</span></label>
+  </div>
+  <div class="count" id="count"></div>
+  <div id="calendar"></div>
+</header>
+<main>
+  <table id="board">
+    <thead><tr id="headRow"></tr></thead>
+    <tbody id="bodyRows"></tbody>
+  </table>
+</main>
+<footer>
+  <p><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
+  <p><strong>Matchup Score</strong> (0–100): 60% game environment (both teams' total projected fantasy points, ranked against today's other games) + 40% the player's share of his own team's projection. Higher = better environment for his number.</p>
+  <p><strong>Difference</strong>: our forecast minus the site's line, in points (absolute). <strong>Agree</strong>: whether all three estimators (A/B/C) land on the same side of the line.</p>
+  <p id="archive"></p>
+</footer>
+<script>
+const DATA = {"date": "2026-10-29", "vintage_tag": "graded-pre", "graded": true, "group": "pre", "graded_at": "2026-11-04T14:37:38-06:00", "summary": {"overall": {"w": 25, "l": 10, "p": 0, "dnp": 0, "hit_pct": 71}, "by_book": {"PrizePicks": {"w": 25, "l": 10, "p": 0, "dnp": 0, "hit_pct": 71}}, "by_market": {"AST": {"w": 2, "l": 2, "p": 0, "dnp": 0, "hit_pct": 50}, "FP": {"w": 7, "l": 1, "p": 0, "dnp": 0, "hit_pct": 88}, "PRA": {"w": 6, "l": 2, "p": 0, "dnp": 0, "hit_pct": 75}, "PTS": {"w": 9, "l": 2, "p": 0, "dnp": 0, "hit_pct": 82}, "REB": {"w": 1, "l": 3, "p": 0, "dnp": 0, "hit_pct": 25}}, "by_side": {"LESS": {"w": 23, "l": 8, "p": 0, "dnp": 0, "hit_pct": 74}, "MORE": {"w": 2, "l": 2, "p": 0, "dnp": 0, "hit_pct": 50}}, "conf70": {"w": 0, "l": 0, "p": 0, "dnp": 0, "hit_pct": null}}, "rows": [{"player": "Jarrett Allen", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "FP", "line": 32.5, "side": "LESS", "forecast": 27.3, "difference": 5.2, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 30.1, "result": "W"}, {"player": "Peyton Watson", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "FP", "line": 28.5, "side": "LESS", "forecast": 23.9, "difference": 4.6, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 17.3, "result": "W"}, {"player": "Cameron Boozer", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "FP", "line": 33.5, "side": "MORE", "forecast": 36.9, "difference": 3.4, "confidence": null, "matchup_score": null, "agree": "ALL MORE", "scenario": "base (Default)", "vintage": "1100", "actual": 48.4, "result": "W"}, {"player": "Ty Jerome", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "FP", "line": 39.5, "side": "LESS", "forecast": 36.3, "difference": 3.2, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 19.9, "result": "W"}, {"player": "Ja Morant", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "FP", "line": 33.5, "side": "LESS", "forecast": 30.5, "difference": 3.0, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 19.9, "result": "W"}, {"player": "Dyson Daniels", "team": "ATL", "opp": "", "matchup": "ATL", "book": "PrizePicks", "market": "FP", "line": 31.5, "side": "LESS", "forecast": 28.9, "difference": 2.6, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 21.7, "result": "W"}, {"player": "Evan Mobley", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "FP", "line": 39.5, "side": "LESS", "forecast": 37.1, "difference": 2.4, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 28.3, "result": "W"}, {"player": "Donovan Clingan", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "FP", "line": 31.5, "side": "LESS", "forecast": 29.2, "difference": 2.3, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 38.1, "result": "L"}, {"player": "Ty Jerome", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "PTS", "line": 23.5, "side": "LESS", "forecast": 17.0, "difference": 6.5, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 10.0, "result": "W"}, {"player": "Zach LaVine", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "PTS", "line": 21.5, "side": "LESS", "forecast": 15.09, "difference": 6.41, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 21.0, "result": "W"}, {"player": "Darius Acuff Jr.", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "PTS", "line": 22.5, "side": "LESS", "forecast": 16.21, "difference": 6.29, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 34.0, "result": "L"}, {"player": "Ty Jerome", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "PRA", "line": 33.5, "side": "LESS", "forecast": 28.21, "difference": 5.29, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 15.0, "result": "W"}, {"player": "Domantas Sabonis", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "PRA", "line": 39.5, "side": "LESS", "forecast": 34.78, "difference": 4.72, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 31.0, "result": "W"}, {"player": "Ja Morant", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "PRA", "line": 27.5, "side": "LESS", "forecast": 23.5, "difference": 4.0, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 19.0, "result": "W"}, {"player": "Darius Acuff Jr.", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "PRA", "line": 30.5, "side": "LESS", "forecast": 26.52, "difference": 3.98, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 54.0, "result": "L"}, {"player": "Ja Morant", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "PTS", "line": 17.5, "side": "LESS", "forecast": 13.66, "difference": 3.84, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 14.0, "result": "W"}, {"player": "Zach LaVine", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "PRA", "line": 28.5, "side": "LESS", "forecast": 24.78, "difference": 3.72, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 29.0, "result": "L"}, {"player": "Domantas Sabonis", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "REB", "line": 14.0, "side": "LESS", "forecast": 10.71, "difference": 3.29, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 15.0, "result": "L"}, {"player": "Damian Lillard", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "PTS", "line": 20.5, "side": "LESS", "forecast": 17.31, "difference": 3.19, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 9.0, "result": "W"}, {"player": "Peyton Watson", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "PTS", "line": 14.5, "side": "LESS", "forecast": 11.34, "difference": 3.16, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 4.0, "result": "W"}, {"player": "Peyton Watson", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "PRA", "line": 21.5, "side": "LESS", "forecast": 18.62, "difference": 2.88, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 11.0, "result": "W"}, {"player": "Damian Lillard", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "PRA", "line": 28.5, "side": "LESS", "forecast": 25.7, "difference": 2.8, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 13.0, "result": "W"}, {"player": "Donovan Mitchell", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "PRA", "line": 34.5, "side": "LESS", "forecast": 32.02, "difference": 2.48, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 28.0, "result": "W"}, {"player": "Precious Achiuwa", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "REB", "line": 8.0, "side": "LESS", "forecast": 5.82, "difference": 2.18, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 9.0, "result": "L"}, {"player": "Ja Morant", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "AST", "line": 6.0, "side": "LESS", "forecast": 3.88, "difference": 2.12, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 3.0, "result": "W"}, {"player": "Jerami Grant", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "PTS", "line": 10.0, "side": "LESS", "forecast": 7.92, "difference": 2.08, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 2.0, "result": "W"}, {"player": "CJ McCollum", "team": "ATL", "opp": "", "matchup": "ATL", "book": "PrizePicks", "market": "PTS", "line": 16.5, "side": "LESS", "forecast": 14.5, "difference": 2.0, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 5.0, "result": "W"}, {"player": "Jaylen Wells", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "PTS", "line": 11.5, "side": "LESS", "forecast": 9.54, "difference": 1.96, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 10.0, "result": "W"}, {"player": "Jaylon Tyson", "team": "CLE", "opp": "", "matchup": "CLE", "book": "PrizePicks", "market": "PTS", "line": 7.5, "side": "MORE", "forecast": 9.39, "difference": 1.89, "confidence": null, "matchup_score": null, "agree": "ALL MORE", "scenario": "base (Default)", "vintage": "1100", "actual": 3.0, "result": "L"}, {"player": "Ty Jerome", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "AST", "line": 6.0, "side": "LESS", "forecast": 4.14, "difference": 1.86, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 3.0, "result": "W"}, {"player": "Zach Edey", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "PTS", "line": 8.0, "side": "MORE", "forecast": 9.57, "difference": 1.57, "confidence": null, "matchup_score": null, "agree": "split", "scenario": "base (Default)", "vintage": "1100", "actual": 13.0, "result": "W"}, {"player": "Zach Edey", "team": "MEM", "opp": "", "matchup": "MEM", "book": "PrizePicks", "market": "REB", "line": 7.5, "side": "LESS", "forecast": 6.0, "difference": 1.5, "confidence": null, "matchup_score": null, "agree": "split", "scenario": "base (Default)", "vintage": "1100", "actual": 7.0, "result": "W"}, {"player": "Darius Acuff Jr.", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "AST", "line": 5.0, "side": "LESS", "forecast": 3.69, "difference": 1.31, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 14.0, "result": "L"}, {"player": "Damian Lillard", "team": "POR", "opp": "", "matchup": "POR", "book": "PrizePicks", "market": "REB", "line": 3.5, "side": "MORE", "forecast": 4.8, "difference": 1.3, "confidence": null, "matchup_score": null, "agree": "split", "scenario": "base (Default)", "vintage": "1100", "actual": 2.0, "result": "L"}, {"player": "Domantas Sabonis", "team": "SAC", "opp": "", "matchup": "SAC", "book": "PrizePicks", "market": "AST", "line": 6.5, "side": "LESS", "forecast": 5.42, "difference": 1.08, "confidence": null, "matchup_score": null, "agree": "ALL LESS", "scenario": "base (Default)", "vintage": "1100", "actual": 7.0, "result": "L"}]};
+const GRADED = !!DATA.graded;
+const COLS = [
+  ["player","Player",0],["matchup","Matchup",0],["book","Site",0],["market","Market",0],
+  ["line","Line",1],["side","Side",0],["forecast","Forecast",1],["difference","Difference",1],
+  ...(GRADED ? [["actual","Actual",1],["result","Result",0]] : []),
+  ["confidence","Confidence",1],["matchup_score","Matchup Score",1],["agree","Agree",0],["scenario","Scenario",0],
+  ...(GRADED ? [["vintage","Vintage",0]] : [])
+];
+let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = "", minConf = 0;
+const rows = DATA.rows || [];
+document.getElementById("meta").textContent =
+  DATA.date + " · vintage " + DATA.vintage_tag + " · updated " + (DATA.generated_at || "") + " · " + rows.length + " suggestions";
+const EDITION = DATA.group === "pre" ? "PRE-4PM edition (ETR set released before 4 PM CT)" :
+  DATA.group === "post" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
+  DATA.vintage_tag === "prelock" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
+  (DATA.vintage_tag === "1100" || DATA.vintage_tag === "noon" ? "PRE-4PM edition (ETR set released before 4 PM CT)" : "");
+if (EDITION) document.getElementById("meta").textContent += " · " + EDITION;
+if (DATA.summary) {
+  const o = DATA.summary.overall, c70 = DATA.summary.conf70;
+  document.getElementById("meta").textContent +=
+    " · GRADED: " + o.w + "-" + o.l + (o.p ? "-" + o.p + "P" : "") +
+    (o.hit_pct !== null && o.hit_pct !== undefined ? " (" + o.hit_pct + "% hit)" : "") +
+    (o.dnp ? " · " + o.dnp + " DNP" : "") +
+    " · Conf 70+: " + c70.w + "-" + c70.l +
+    (c70.hit_pct !== null && c70.hit_pct !== undefined ? " (" + c70.hit_pct + "%)" : "");
+}
+const sites = ["All", ...new Set(rows.map(r => r.book))];
+const markets = ["All", ...new Set(rows.map(r => r.market))];
+const tabs = document.getElementById("siteTabs");
+sites.forEach(s => {
+  const b = document.createElement("button");
+  b.textContent = s; if (s === "All") b.className = "active";
+  b.onclick = () => { site = s; [...tabs.children].forEach(x => x.classList.remove("active")); b.classList.add("active"); render(); };
+  tabs.appendChild(b);
+});
+const msel = document.getElementById("marketSel");
+markets.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m === "All" ? "All markets" : m; msel.appendChild(o); });
+msel.onchange = () => { market = msel.value; render(); };
+document.getElementById("q").oninput = e => { query = e.target.value.toLowerCase(); render(); };
+const mc = document.getElementById("minConf");
+mc.oninput = () => { minConf = +mc.value; document.getElementById("minConfVal").textContent = mc.value; render(); };
+const head = document.getElementById("headRow");
+COLS.forEach(([key, label, num]) => {
+  const th = document.createElement("th");
+  if (num) th.className = "num";
+  th.innerHTML = label + (key === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "");
+  th.onclick = () => {
+    if (sortKey === key) sortDir = -sortDir; else { sortKey = key; sortDir = -1; }
+    [...head.children].forEach((h, i) => {
+      const k = COLS[i][0];
+      h.innerHTML = COLS[i][1] + (k === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "");
+    });
+    render();
+  };
+  head.appendChild(th);
+});
+function shade(v) {
+  if (v === null || v === undefined) return "";
+  const a = Math.max(0, Math.min(0.55, (v - 50) / 70));
+  return ' style="background:rgba(74,222,128,' + a.toFixed(2) + ')"';
+}
+function resultCell(res) {
+  const map = { W: ["HIT", "hit"], L: ["MISS", "miss"], P: ["PUSH", "push"], DNP: ["DNP", "dnp"] };
+  const m = map[res] || [res || "", ""];
+  return '<td class="' + m[1] + '">' + m[0] + "</td>";
+}
+function render() {
+  let out = rows.filter(r =>
+    (site === "All" || r.book === site) &&
+    (market === "All" || r.market === market) &&
+    (r.confidence >= minConf) &&
+    (!query || (r.player + " " + r.matchup).toLowerCase().includes(query)));
+  out.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (typeof x === "number" && typeof y === "number") return (x - y) * sortDir;
+    return String(x).localeCompare(String(y)) * sortDir;
+  });
+  document.getElementById("count").textContent = out.length + " rows shown";
+  document.getElementById("bodyRows").innerHTML = out.map(r =>
+    "<tr>" +
+    "<td>" + r.player + "</td><td>" + r.matchup + "</td><td>" + r.book + "</td><td>" + r.market + "</td>" +
+    '<td class="num">' + r.line + "</td>" +
+    '<td class="' + (r.side === "MORE" ? "more" : "less") + '">' + r.side + "</td>" +
+    '<td class="num">' + r.forecast + "</td>" +
+    '<td class="num">' + r.difference + "</td>" +
+    (GRADED ? '<td class="num">' + (r.actual ?? "") + "</td>" + resultCell(r.result) : "") +
+    '<td class="num score"' + shade(r.confidence) + ">" + (r.confidence ?? "—") + "</td>" +
+    '<td class="num score"' + shade(r.matchup_score) + ">" + (r.matchup_score ?? "") + "</td>" +
+    "<td>" + r.agree + "</td>" +
+    '<td class="scen">' + (r.scenario && r.scenario.startsWith("scenario") ? r.scenario : "") + "</td>" +
+    (GRADED ? "<td>" + (r.vintage || "") + "</td>" : "") +
+    "</tr>").join("");
+}
+document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-10-29-pre.html\">2026-10-29</a> \u00b7 <a href=\"2026-11-02-pre.html\">2026-11-02 pre</a> \u00b7 <a href=\"2026-11-02-post.html\">2026-11-02 post</a> \u00b7 <a href=\"2026-11-04-pre.html\">2026-11-04</a>";
+document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>October 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td><td>2</td><td>3</td><td>4</td></tr><tr><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr><tr><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td></tr><tr><td>19</td><td>20</td><td>21</td><td>22</td><td>23</td><td>24</td><td>25</td></tr><tr><td>26</td><td>27</td><td>28</td><td><a href=\"2026-10-29-pre.html\">29</a><div class=\"cal-rec\">Pre 25-10 \u00b7 71%</div></td><td>30</td><td>31</td><td class=\"off\"></td></tr></table></div><div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td><a href=\"2026-11-02-pre.html\">2</a><div class=\"cal-rec\">Pre 12-21 \u00b7 36%</div><div class=\"cal-rec\">Post 12-21 \u00b7 36%</div></td><td>3</td><td><a href=\"2026-11-04-pre.html\">4</a></td><td>5</td><td>6</td><td>7</td><td>8</td></tr><tr><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td></tr><tr><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
+render();
+</script>
+</body>
+</html>
