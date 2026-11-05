@@ -12,7 +12,8 @@
   .sub { color:#9aa4b2; font-size:14px; }
   .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
   .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
-  .tabs button, .sportnav button, select, input[type=search] { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  .tabs button, .sportnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  #refreshBtn { cursor:pointer; } #refreshBtn:disabled { opacity:.5; cursor:default; }
   .tabs button.active, .sportnav button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
   .sportnav { margin:2px 0 8px; display:flex; gap:8px; }
   label { font-size:13px; color:#9aa4b2; }
@@ -47,6 +48,11 @@
   <div class="sportnav" id="sportNav"></div>
   <div class="sub" id="meta"></div>
   <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
+  <div class="controls" id="refreshRow" style="display:none">
+    <button id="refreshBtn" type="button">&#8635; Refresh now</button>
+    <span class="sub" id="refreshMsg"></span>
+    <span class="sub" id="stamps"></span>
+  </div>
   <div class="controls">
     <span class="tabs" id="siteTabs"></span>
     <select id="marketSel"></select>
@@ -64,6 +70,8 @@
 </main>
 <footer>
   <p id="confNote"><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
+  <p id="adjNote" hidden><strong>ETR now (Δ exp)</strong>: on pre-final issues the Forecast is the best guess at the FINAL ETR number. This column shows the current ETR projection and the total expected move into the final set — ETR's morning→final drift plus a per-player adjustment when the day's injury news implies one. At the pre-lock issue the final set is in and the column disappears.</p>
+  <p id="recNote" hidden><strong>Rec. Conf</strong> (recommended confidence): the hit rate of graded rows issued in the same market at the same model-confidence band, shrunk toward 50% — it is what the graded record says a score like this has actually been worth. Appears once a band has 10+ graded rows, and sharpens as more slates grade out.</p>
   <p><strong>Matchup Score</strong> (0–100): 60% game environment (both teams' total projected fantasy points, ranked against today's other games) + 40% the player's share of his own team's projection. Higher = better environment for his number.</p>
   <p><strong>Difference</strong>: our forecast minus the site's line, in points (absolute). <strong>Agree</strong>: whether all three estimators (A/B/C) land on the same side of the line.</p>
   <p id="archive"></p>
@@ -73,13 +81,21 @@ const DATA = {"date": "2026-11-05", "sport": "nfl", "vintage_tag": "morning", "g
 const GRADED = !!DATA.graded;
 const COLS = [
   ["player","Player",0],["matchup","Matchup",0],["book","Site",0],["market","Market",0],
-  ["line","Line",1],["side","Side",0],["forecast","Forecast",1],["difference","Difference",1],
+  ["line","Line",1],["side","Side",0],["forecast","Forecast",1],
+  ...((DATA.rows || []).some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined) ? [["exp_change_pct","ETR now (Δ exp)",1]] : []),
+  ["difference","Difference",1],
   ...(GRADED ? [["actual","Actual",1],["result","Result",0]] : []),
-  ["confidence","Confidence",1],["matchup_score","Matchup Score",1],["agree","Agree",0],["scenario","Scenario",0],
+  ["confidence","Confidence",1],
+  ...((DATA.rows || []).some(r => r.rec_confidence !== null && r.rec_confidence !== undefined) ? [["rec_confidence","Rec. Conf",1]] : []),
+  ["matchup_score","Matchup Score",1],["agree","Agree",0],["scenario","Scenario",0],
   ...(GRADED ? [["vintage","Vintage",0]] : [])
 ];
 let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = "", minConf = 0;
 const rows = DATA.rows || [];
+const HASADJ = rows.some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined);
+if (HASADJ) document.getElementById("adjNote").hidden = false;
+const HASREC = rows.some(r => r.rec_confidence !== null && r.rec_confidence !== undefined);
+if (HASREC) document.getElementById("recNote").hidden = false;
 document.getElementById("meta").textContent =
   DATA.date + " · vintage " + DATA.vintage_tag + " · updated " + (DATA.generated_at || "") + " · " + rows.length + " suggestions";
 const NFL = DATA.sport === "nfl";
@@ -101,6 +117,44 @@ if (DATA.summary) {
     " · Conf 70+: " + c70.w + "-" + c70.l +
     (c70.hit_pct !== null && c70.hit_pct !== undefined ? " (" + c70.hit_pct + "%)" : "");
 }
+// Last updated / next update stamps + manual refresh (Daniel, Nov 5 2026).
+// The publisher injects next_update (and refresh_url, once the refresh
+// endpoint exists) into DATA on NBA pages; absent fields hide the row.
+(function () {
+  const rowEl = document.getElementById("refreshRow");
+  const stampsEl = document.getElementById("stamps");
+  const btn = document.getElementById("refreshBtn");
+  const msg = document.getElementById("refreshMsg");
+  function fmtCT(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " CT";
+  }
+  const parts = [];
+  if (DATA.generated_at) parts.push("Last updated " + fmtCT(DATA.generated_at));
+  if (DATA.next_update) parts.push("Next update " + DATA.next_update);
+  if (parts.length || DATA.refresh_url) {
+    rowEl.style.display = "flex";
+    stampsEl.textContent = parts.join(" · ");
+  }
+  if (DATA.refresh_url) {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      msg.textContent = "Requesting refresh…";
+      try {
+        const resp = await fetch(DATA.refresh_url, { method: "POST" });
+        const j = await resp.json();
+        msg.textContent = j.message || "Refresh requested.";
+      } catch (e) {
+        msg.textContent = "Refresh request failed — scheduled updates continue.";
+      }
+      setTimeout(() => { btn.disabled = false; }, 5000);
+    };
+  } else {
+    btn.style.display = "none";
+  }
+})();
 const sites = ["All", ...new Set(rows.map(r => r.book))];
 const markets = ["All", ...new Set(rows.map(r => r.market))];
 const tabs = document.getElementById("siteTabs");
@@ -159,9 +213,11 @@ function render() {
     '<td class="num">' + r.line + "</td>" +
     '<td class="' + (r.side === "MORE" ? "more" : "less") + '">' + r.side + "</td>" +
     '<td class="num">' + r.forecast + "</td>" +
+    (HASADJ ? '<td class="num">' + (r.exp_change_pct !== null && r.exp_change_pct !== undefined ? r.etr_now + " (" + (r.exp_change_pct >= 0 ? "+" : "") + r.exp_change_pct + "%)" : "") + "</td>" : "") +
     '<td class="num">' + r.difference + "</td>" +
     (GRADED ? '<td class="num">' + (r.actual ?? "") + "</td>" + resultCell(r.result) : "") +
     '<td class="num score"' + shade(r.confidence) + ">" + (r.confidence ?? "—") + "</td>" +
+    (HASREC ? '<td class="num">' + (r.rec_confidence ?? "") + "</td>" : "") +
     '<td class="num score"' + shade(r.matchup_score) + ">" + (r.matchup_score ?? "") + "</td>" +
     "<td>" + r.agree + "</td>" +
     '<td class="scen">' + (r.scenario && r.scenario.startsWith("scenario") ? r.scenario : "") + "</td>" +
