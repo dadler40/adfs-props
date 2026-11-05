@@ -12,8 +12,9 @@
   .sub { color:#9aa4b2; font-size:14px; }
   .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
   .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
-  .tabs button, select, input[type=search] { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
-  .tabs button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .tabs button, .sportnav button, select, input[type=search] { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  .tabs button.active, .sportnav button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .sportnav { margin:2px 0 8px; display:flex; gap:8px; }
   label { font-size:13px; color:#9aa4b2; }
   main { max-width:1200px; margin:0 auto; padding:0 16px 24px; overflow-x:auto; }
   table { border-collapse:collapse; width:100%; font-size:14px; }
@@ -43,6 +44,7 @@
 <body>
 <header>
   <h1>ADFS PROPS</h1>
+  <div class="sportnav" id="sportNav"></div>
   <div class="sub" id="meta"></div>
   <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
   <div class="controls">
@@ -61,7 +63,7 @@
   </table>
 </main>
 <footer>
-  <p><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
+  <p id="confNote"><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
   <p><strong>Matchup Score</strong> (0–100): 60% game environment (both teams' total projected fantasy points, ranked against today's other games) + 40% the player's share of his own team's projection. Higher = better environment for his number.</p>
   <p><strong>Difference</strong>: our forecast minus the site's line, in points (absolute). <strong>Agree</strong>: whether all three estimators (A/B/C) land on the same side of the line.</p>
   <p id="archive"></p>
@@ -80,10 +82,15 @@ let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = 
 const rows = DATA.rows || [];
 document.getElementById("meta").textContent =
   DATA.date + " · vintage " + DATA.vintage_tag + " · updated " + (DATA.generated_at || "") + " · " + rows.length + " suggestions";
-const EDITION = DATA.group === "pre" ? "PRE-4PM edition (ETR set released before 4 PM CT)" :
+const NFL = DATA.sport === "nfl";
+const EDITION = NFL ?
+  (DATA.group === "pre" || DATA.vintage_tag === "morning" ? "PRE edition (morning — ETR weekly set + ~11 AM board state)" :
+   DATA.group === "post" || DATA.vintage_tag === "prelock" ? "POST edition (pre-lock snapshot)" : "") :
+  DATA.group === "pre" ? "PRE-4PM edition (ETR set released before 4 PM CT)" :
   DATA.group === "post" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
   DATA.vintage_tag === "prelock" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
   (DATA.vintage_tag === "1100" || DATA.vintage_tag === "noon" ? "PRE-4PM edition (ETR set released before 4 PM CT)" : "");
+if (DATA.conf_note) document.getElementById("confNote").innerHTML = DATA.conf_note;
 if (EDITION) document.getElementById("meta").textContent += " · " + EDITION;
 if (DATA.summary) {
   const o = DATA.summary.overall, c70 = DATA.summary.conf70;
@@ -163,6 +170,7 @@ function render() {
 }
 document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-10-29-pre.html\">2026-10-29</a> \u00b7 <a href=\"2026-11-02-pre.html\">2026-11-02 pre</a> \u00b7 <a href=\"2026-11-02-post.html\">2026-11-02 post</a> \u00b7 <a href=\"2026-11-04-pre.html\">2026-11-04 pre</a> \u00b7 <a href=\"2026-11-04-post.html\">2026-11-04 post</a> \u00b7 <a href=\"2026-11-05-pre.html\">2026-11-05</a>";
 document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>October 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td><td>2</td><td>3</td><td>4</td></tr><tr><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr><tr><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td></tr><tr><td>19</td><td>20</td><td>21</td><td>22</td><td>23</td><td>24</td><td>25</td></tr><tr><td>26</td><td>27</td><td>28</td><td><a href=\"2026-10-29-pre.html\">29</a><div class=\"cal-rec\">Pre 25-10 \u00b7 71%</div></td><td>30</td><td>31</td><td class=\"off\"></td></tr></table></div><div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td><a href=\"2026-11-02-pre.html\">2</a><div class=\"cal-rec\">Pre 12-21 \u00b7 36%</div><div class=\"cal-rec\">Post 12-21 \u00b7 36%</div></td><td>3</td><td><a href=\"2026-11-04-pre.html\">4</a><div class=\"cal-rec\">Pre 505-475 \u00b7 52%</div><div class=\"cal-rec\">Post 163-157 \u00b7 51%</div></td><td><a href=\"2026-11-05-pre.html\">5</a></td><td>6</td><td>7</td><td>8</td></tr><tr><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td></tr><tr><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
+document.getElementById("sportNav").innerHTML = "<button class=\"active\">NBA</button><button onclick=\"location.href='nfl/index.html'\">NFL</button>";
 render();
 </script>
 </body>
