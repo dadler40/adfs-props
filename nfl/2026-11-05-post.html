@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADFS PROPS — Pilot</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#0e1116; color:#e6e9ee; margin:0; }
+  header { padding:20px 16px 8px; max-width:1200px; margin:0 auto; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:.5px; }
+  .sub { color:#9aa4b2; font-size:14px; }
+  .betatag { color:#ffb020; font-size:13px; border:1px solid #ffb020; border-radius:4px; padding:0 5px; vertical-align:middle; }
+  .tlrec th, .tlrec td { padding:2px 10px 2px 0; text-align:left; }
+  #topLegs ul { margin:4px 0 10px 18px; padding:0; }
+  .tlflag { color:#ffb020; }
+  .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
+  .tabs button, .sportnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  #refreshBtn { cursor:pointer; } #refreshBtn:disabled { opacity:.5; cursor:default; }
+  .tabs button.active, .sportnav button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .sportnav { margin:2px 0 8px; display:flex; gap:8px; }
+  label { font-size:13px; color:#9aa4b2; }
+  main { max-width:1200px; margin:0 auto; padding:0 16px 24px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { padding:6px 8px; border-bottom:1px solid #232a34; text-align:left; white-space:nowrap; }
+  th { cursor:pointer; user-select:none; position:sticky; top:0; background:#141922; }
+  th:hover { color:#7db4ff; }
+  th .dir { font-size:10px; color:#7db4ff; }
+  td.num, th.num { text-align:right; }
+  .score { font-weight:600; border-radius:4px; }
+  .more { color:#4ade80; } .less { color:#f87171; }
+  .scen { color:#ffd75e; font-size:12px; }
+  footer { max-width:1200px; margin:0 auto; padding:0 16px 32px; color:#9aa4b2; font-size:13px; line-height:1.5; }
+  footer a { color:#7db4ff; }
+  .count { color:#9aa4b2; font-size:13px; margin:6px 0; }
+  #calendar { margin:12px 0 2px; }
+  .cal-month { display:inline-block; vertical-align:top; margin:0 18px 8px 0; }
+  .cal-month h3 { margin:4px 0 6px; font-size:15px; }
+  table.cal { border-collapse:collapse; width:auto; font-size:12px; }
+  table.cal th, table.cal td { border:1px solid #232a34; padding:4px 5px; text-align:center; min-width:46px; }
+  table.cal td.off { color:#39424e; }
+  table.cal a { color:#7db4ff; text-decoration:none; font-weight:700; font-size:14px; }
+  .cal-rec { font-size:10px; color:#9aa4b2; white-space:nowrap; }
+  .hit { color:#4ade80; font-weight:700; } .miss { color:#f87171; font-weight:700; }
+  .push { color:#9aa4b2; font-weight:700; } .dnp { color:#5b6572; font-weight:700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ADFS PROPS</h1>
+  <div class="sportnav" id="sportNav"></div>
+  <div class="sub" id="meta"></div>
+  <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
+  <div class="controls" id="refreshRow" style="display:none">
+    <button id="refreshBtn" type="button">&#8635; Refresh now</button>
+    <span class="sub" id="refreshMsg"></span>
+    <span class="sub" id="stamps"></span>
+  </div>
+  <div class="controls">
+    <span class="tabs" id="siteTabs"></span>
+    <select id="marketSel"></select>
+    <input type="search" id="q" placeholder="Search player or matchup">
+    <label>Min confidence <input type="range" id="minConf" min="0" max="85" step="5" value="0"> <span id="minConfVal">0</span></label>
+  </div>
+  <div class="count" id="count"></div>
+  <div id="calendar"></div>
+</header>
+<main>
+  <table id="board">
+    <thead><tr id="headRow"></tr></thead>
+    <tbody id="bodyRows"></tbody>
+  </table>
+  <div id="topLegs" hidden>
+    <h2>Top Legs <span class="betatag" id="topLegsTag">BETA</span></h2>
+    <p class="sub" id="topLegsBeta"></p>
+    <div id="topLegsSlips"></div>
+    <h3 id="topLegsRecHead" hidden>Rolling record</h3>
+    <div id="topLegsRecord"></div>
+  </div>
+</main>
+<footer>
+  <p id="confNote"><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
+  <p id="adjNote" hidden><strong>ETR now (Δ exp)</strong>: on pre-final issues the Forecast is the best guess at the FINAL ETR number. This column shows the current ETR projection and the total expected move into the final set — ETR's morning→final drift plus a per-player adjustment when the day's injury news implies one. At the pre-lock issue the final set is in and the column disappears.</p>
+  <p id="recNote" hidden><strong>Rec. Conf</strong> (recommended confidence): the hit rate of graded rows issued in the same market at the same model-confidence band, shrunk toward 50% — it is what the graded record says a score like this has actually been worth. Appears once a band has 10+ graded rows, and sharpens as more slates grade out.</p>
+  <p><strong>Matchup Score</strong> (0–100): 60% game environment (both teams' total projected fantasy points, ranked against today's other games) + 40% the player's share of his own team's projection. Higher = better environment for his number.</p>
+  <p><strong>Difference</strong>: our forecast minus the site's line, in points (absolute). <strong>Agree</strong>: whether all three estimators (A/B/C) land on the same side of the line.</p>
+  <p id="archive"></p>
+</footer>
+<script>
+const DATA = {"date": "2026-11-05", "sport": "nfl", "vintage_tag": "prelock", "generated_at": "2026-11-05T18:40:24-06:00", "rows": [{"player": "Bhayshul Tuten", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 81.5, "side": "LESS", "forecast": 41.38, "difference": 40.12, "confidence": 85, "matchup_score": 15, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.50)"}, {"player": "Bhayshul Tuten", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Rush Yds", "market_key": "rushing_yards", "line": 63.5, "side": "LESS", "forecast": 31.3, "difference": 32.2, "confidence": 85, "matchup_score": 15, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.50)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Pass Att", "market_key": "passingattempts", "line": 29.5, "side": "LESS", "forecast": 25.44, "difference": 4.06, "confidence": 85, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Pass Att", "market_key": "passingattempts", "line": 29.5, "side": "LESS", "forecast": 25.44, "difference": 4.06, "confidence": 85, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Completions", "market_key": "passingcompletions", "line": 19.5, "side": "LESS", "forecast": 15.65, "difference": 3.85, "confidence": 85, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Completions", "market_key": "passingcompletions", "line": 19.5, "side": "LESS", "forecast": 15.65, "difference": 3.85, "confidence": 85, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Jake Moody", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 4.5, "side": "MORE", "forecast": 7.11, "difference": 2.61, "confidence": 84, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.05)"}, {"player": "Jake Moody", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 4.5, "side": "MORE", "forecast": 7.11, "difference": 2.61, "confidence": 84, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.05)"}, {"player": "Justice Hill", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rush Att", "market_key": "rushingattempts", "line": 3.5, "side": "MORE", "forecast": 5.87, "difference": 2.37, "confidence": 76, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.08)"}, {"player": "Justice Hill", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Rush Yds", "market_key": "rushing_yards", "line": 13.5, "side": "MORE", "forecast": 25.45, "difference": 11.95, "confidence": 71, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.13)"}, {"player": "Brian Thomas", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Targets", "market_key": "targets", "line": 1.5, "side": "MORE", "forecast": 2.73, "difference": 1.23, "confidence": 71, "matchup_score": 18, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.16)"}, {"player": "Jake Moody", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "XP Made", "market_key": "extrapointmade", "line": 1.5, "side": "MORE", "forecast": 1.95, "difference": 0.45, "confidence": 71, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.05)"}, {"player": "Jake Moody", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "XP Made", "market_key": "extrapointmade", "line": 1.5, "side": "MORE", "forecast": 1.95, "difference": 0.45, "confidence": 71, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.05)"}, {"player": "Zay Flowers", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 48.5, "side": "MORE", "forecast": 60.63, "difference": 12.13, "confidence": 69, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Justice Hill", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rush Yds", "market_key": "rushing_yards", "line": 13.5, "side": "MORE", "forecast": 24.22, "difference": 10.72, "confidence": 69, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.08)"}, {"player": "Justice Hill", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Rush Att", "market_key": "rushingattempts", "line": 4.5, "side": "MORE", "forecast": 6.17, "difference": 1.67, "confidence": 69, "matchup_score": 30, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.13)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Pass Yds", "market_key": "passing_yards", "line": 233.5, "side": "LESS", "forecast": 207.03, "difference": 26.47, "confidence": 68, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Zay Flowers", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 48.5, "side": "MORE", "forecast": 59.6, "difference": 11.1, "confidence": 68, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.85)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Pass+Rush Yds", "market_key": "passingandrushingyards", "line": 249.5, "side": "LESS", "forecast": 224.7, "difference": 24.8, "confidence": 67, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Pass+Rush Yds", "market_key": "passingandrushingyards", "line": 249.5, "side": "LESS", "forecast": 224.7, "difference": 24.8, "confidence": 67, "matchup_score": 39, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Derrick Henry", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rush Yds", "market_key": "rushing_yards", "line": 68.5, "side": "LESS", "forecast": 58.9, "difference": 9.6, "confidence": 67, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.08)"}, {"player": "Derrick Henry", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rush Att", "market_key": "rushingattempts", "line": 16.5, "side": "MORE", "forecast": 18.04, "difference": 1.54, "confidence": 67, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.08)"}, {"player": "Joe Fagnano", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Pass Att", "market_key": "passingattempts", "line": 28.5, "side": "LESS", "forecast": 27.0, "difference": 1.5, "confidence": 67, "matchup_score": 35, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.92)"}, {"player": "Joe Fagnano", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Pass Att", "market_key": "passingattempts", "line": 28.5, "side": "LESS", "forecast": 27.0, "difference": 1.5, "confidence": 67, "matchup_score": 35, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.92)"}, {"player": "Derrick Henry", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Rush Yds", "market_key": "rushing_yards", "line": 67.5, "side": "LESS", "forecast": 58.13, "difference": 9.37, "confidence": 66, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.07)"}, {"player": "Derrick Henry", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 80.5, "side": "LESS", "forecast": 69.41, "difference": 11.09, "confidence": 64, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.08)"}, {"player": "Derrick Henry", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 79.5, "side": "LESS", "forecast": 68.5, "difference": 11.0, "confidence": 64, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.07)"}, {"player": "Brian Thomas", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 12.5, "side": "MORE", "forecast": 21.39, "difference": 8.89, "confidence": 64, "matchup_score": 18, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.16)"}, {"player": "Brenton Strange", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 35.5, "side": "MORE", "forecast": 44.14, "difference": 8.64, "confidence": 64, "matchup_score": 31, "agree": "Sleeper proj", "scenario": "Sleeper projections"}, {"player": "Brian Thomas Jr.", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 12.5, "side": "MORE", "forecast": 20.93, "difference": 8.43, "confidence": 64, "matchup_score": 18, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.13)"}, {"player": "Joe Fagnano", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rush Att", "market_key": "rushingattempts", "line": 2.5, "side": "MORE", "forecast": 3.76, "difference": 1.26, "confidence": 64, "matchup_score": 35, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.92)"}, {"player": "Rashod Bateman", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 13.5, "side": "MORE", "forecast": 21.74, "difference": 8.24, "confidence": 63, "matchup_score": 22, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.92)"}, {"player": "Brenton Strange", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 35.5, "side": "MORE", "forecast": 43.24, "difference": 7.74, "confidence": 63, "matchup_score": 31, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.98)"}, {"player": "Zay Flowers", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "FP", "market_key": "fantasy_points", "line": 10.0, "side": "MORE", "forecast": 12.1, "difference": 2.1, "confidence": 63, "matchup_score": 39, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-04_etr-nfl-projections-week9.csv)"}, {"player": "Cam Little", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 8.5, "side": "MORE", "forecast": 9.35, "difference": 0.85, "confidence": 63, "matchup_score": 28, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.94)"}, {"player": "Cam Little", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 8.5, "side": "MORE", "forecast": 9.35, "difference": 0.85, "confidence": 63, "matchup_score": 28, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.94)"}, {"player": "Rashod Bateman", "team": "BAL", "opp": "JAX", "matchup": "BAL vs JAX", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 14.5, "side": "MORE", "forecast": 22.12, "difference": 7.62, "confidence": 62, "matchup_score": 22, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.93)"}, {"player": "Jakobi Meyers", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 38.5, "side": "MORE", "forecast": 45.59, "difference": 7.09, "confidence": 62, "matchup_score": 30, "agree": "Sleeper proj", "scenario": "Sleeper projections"}, {"player": "Jakobi Meyers", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 39.5, "side": "MORE", "forecast": 45.59, "difference": 6.09, "confidence": 60, "matchup_score": 30, "agree": "Sleeper proj", "scenario": "Sleeper projections"}, {"player": "Jakobi Meyers", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "FP", "market_key": "fantasy_points", "line": 7.8, "side": "MORE", "forecast": 9.4, "difference": 1.6, "confidence": 60, "matchup_score": 30, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-04_etr-nfl-projections-week9.csv)"}, {"player": "Brian Thomas Jr.", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Sleeper", "market": "FP", "market_key": "fantasy_points", "line": 2.8, "side": "MORE", "forecast": 4.3, "difference": 1.5, "confidence": 59, "matchup_score": 18, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-04_etr-nfl-projections-week9.csv)"}, {"player": "Trevor Lawrence", "team": "JAX", "opp": "BAL", "matchup": "JAX vs BAL", "book": "Underdog", "market": "FP", "market_key": "fantasy_points", "line": 18.75, "side": "LESS", "forecast": 16.9, "difference": 1.85, "confidence": 55, "matchup_score": 39, "agree": "split", "scenario": "ETR weekly (2026-11-04_etr-nfl-projections-week9.csv)"}], "conf_note": "<strong>Confidence</strong> (0\u2013100): pilot model score from <strong>provisional v1 per-market sigmas</strong> \u2014 the NFL layer has no clean graded sample yet, so these are scale constants, not calibrated error rates. They are replaced by graded NFL sigmas as slates grade out. FP forecasts are ETR weekly projections scored per site (Sleeper/PrizePicks full PPR, Underdog half PPR); stat forecasts are Sleeper projections. Not a calibrated hit rate."};
+const GRADED = !!DATA.graded;
+const COLS = [
+  ["player","Player",0],["matchup","Matchup",0],["book","Site",0],["market","Market",0],
+  ["line","Line",1],["side","Side",0],["forecast","Forecast",1],
+  ...((DATA.rows || []).some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined) ? [["exp_change_pct","ETR now (Δ exp)",1]] : []),
+  ["difference","Difference",1],
+  ...(GRADED ? [["actual","Actual",1],["result","Result",0]] : []),
+  ["confidence","Confidence",1],
+  ...((DATA.rows || []).some(r => r.rec_confidence !== null && r.rec_confidence !== undefined) ? [["rec_confidence","Rec. Conf",1]] : []),
+  ["matchup_score","Matchup Score",1],["agree","Agree",0],["scenario","Scenario",0],
+  ...(GRADED ? [["vintage","Vintage",0]] : [])
+];
+let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = "", minConf = 0;
+const rows = DATA.rows || [];
+const HASADJ = rows.some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined);
+if (HASADJ) document.getElementById("adjNote").hidden = false;
+const HASREC = rows.some(r => r.rec_confidence !== null && r.rec_confidence !== undefined);
+if (HASREC) document.getElementById("recNote").hidden = false;
+// Top Legs ladders + rolling record (Daniel, Nov 5 2026; BETA).
+const TL = DATA.top_legs;
+if (TL && ((TL.slips || []).length || (TL.record || []).length)) {
+  document.getElementById("topLegs").hidden = false;
+  if (!TL.beta) document.getElementById("topLegsTag").hidden = true;
+  document.getElementById("topLegsBeta").textContent = TL.beta
+    ? "BETA — testing only, not for real money yet. The rolling record resets when this leaves beta; beta slips stay in the log for calibration study."
+    : "Rolling record counts slips issued since launch.";
+  const byBook = {};
+  (TL.slips || []).forEach(s => { (byBook[s.book] = byBook[s.book] || []).push(s); });
+  const wrap = document.getElementById("topLegsSlips");
+  Object.keys(byBook).sort().forEach(book => {
+    const h = document.createElement("h3");
+    h.textContent = book;
+    wrap.appendChild(h);
+    byBook[book].forEach(s => {
+      const d = document.createElement("div");
+      const t = document.createElement("strong");
+      t.textContent = "Top " + s.size + "-man" + (s.slip_result ? " — " + s.slip_result : "");
+      d.appendChild(t);
+      const ul = document.createElement("ul");
+      s.legs.forEach((lg, i) => {
+        const li = document.createElement("li");
+        let txt = lg.player + " " + lg.market + " " + lg.side + " " + lg.line +
+          " (forecast " + lg.forecast + ", conf " + lg.confidence + ")";
+        if (s.leg_results && s.leg_results[i]) {
+          const lr = s.leg_results[i];
+          txt += " → " + (lr.actual === null || lr.actual === undefined ? "DNP" : lr.actual) + " " + lr.result;
+        }
+        li.textContent = txt;
+        ul.appendChild(li);
+        (lg.flags || []).forEach(f => {
+          const fl = document.createElement("li");
+          fl.className = "tlflag";
+          fl.textContent = "⚠ CAUTION — " + f;
+          ul.appendChild(fl);
+        });
+      });
+      d.appendChild(ul);
+      wrap.appendChild(d);
+    });
+  });
+  if ((TL.record || []).length) {
+    document.getElementById("topLegsRecHead").hidden = false;
+    const books = [...new Set(TL.record.map(r => r.book))].sort();
+    const tbl = document.createElement("table");
+    tbl.className = "tlrec";
+    const head = document.createElement("tr");
+    ["Site", "2-man", "3-man", "4-man", "5-man"].forEach(x => {
+      const th = document.createElement("th"); th.textContent = x; head.appendChild(th);
+    });
+    tbl.appendChild(head);
+    books.forEach(b => {
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td"); td0.textContent = b; tr.appendChild(td0);
+      [2, 3, 4, 5].forEach(sz => {
+        const td = document.createElement("td");
+        const r = TL.record.find(x => x.book === b && x.size === sz);
+        td.textContent = r ? (r.w + "-" + r.l + (r.p ? "-" + r.p + "P" : "")) : "—";
+        tr.appendChild(td);
+      });
+      tbl.appendChild(tr);
+    });
+    document.getElementById("topLegsRecord").appendChild(tbl);
+  }
+}
+document.getElementById("meta").textContent =
+  DATA.date + " · vintage " + DATA.vintage_tag + " · updated " + (DATA.generated_at || "") + " · " + rows.length + " suggestions";
+const NFL = DATA.sport === "nfl";
+const EDITION = NFL ?
+  (DATA.group === "pre" || DATA.vintage_tag === "morning" ? "PRE edition (morning — ETR weekly set + ~11 AM board state)" :
+   DATA.group === "post" || DATA.vintage_tag === "prelock" ? "POST edition (pre-lock snapshot)" : "") :
+  DATA.group === "pre" ? "PRE-4PM edition (ETR set released before 4 PM CT)" :
+  DATA.group === "post" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
+  DATA.vintage_tag === "prelock" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
+  (DATA.vintage_tag === "1100" || DATA.vintage_tag === "noon" ? "PRE-4PM edition (ETR set released before 4 PM CT)" : "");
+if (DATA.conf_note) document.getElementById("confNote").innerHTML = DATA.conf_note;
+if (EDITION) document.getElementById("meta").textContent += " · " + EDITION;
+if (DATA.summary) {
+  const o = DATA.summary.overall, c70 = DATA.summary.conf70;
+  document.getElementById("meta").textContent +=
+    " · GRADED: " + o.w + "-" + o.l + (o.p ? "-" + o.p + "P" : "") +
+    (o.hit_pct !== null && o.hit_pct !== undefined ? " (" + o.hit_pct + "% hit)" : "") +
+    (o.dnp ? " · " + o.dnp + " DNP" : "") +
+    " · Conf 70+: " + c70.w + "-" + c70.l +
+    (c70.hit_pct !== null && c70.hit_pct !== undefined ? " (" + c70.hit_pct + "%)" : "");
+}
+// Last updated / next update stamps + manual refresh (Daniel, Nov 5 2026).
+// The publisher injects next_update (and refresh_url, once the refresh
+// endpoint exists) into DATA on NBA pages; absent fields hide the row.
+(function () {
+  const rowEl = document.getElementById("refreshRow");
+  const stampsEl = document.getElementById("stamps");
+  const btn = document.getElementById("refreshBtn");
+  const msg = document.getElementById("refreshMsg");
+  function fmtCT(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " CT";
+  }
+  const parts = [];
+  if (DATA.generated_at) parts.push("Last updated " + fmtCT(DATA.generated_at));
+  if (DATA.next_update) parts.push("Next update " + DATA.next_update);
+  if (parts.length || DATA.refresh_url) {
+    rowEl.style.display = "flex";
+    stampsEl.textContent = parts.join(" · ");
+  }
+  if (DATA.refresh_url) {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      msg.textContent = "Requesting refresh…";
+      try {
+        const resp = await fetch(DATA.refresh_url, { method: "POST" });
+        const j = await resp.json();
+        msg.textContent = j.message || "Refresh requested.";
+      } catch (e) {
+        msg.textContent = "Refresh request failed — scheduled updates continue.";
+      }
+      setTimeout(() => { btn.disabled = false; }, 5000);
+    };
+  } else {
+    btn.style.display = "none";
+  }
+})();
+const sites = ["All", ...new Set(rows.map(r => r.book))];
+const markets = ["All", ...new Set(rows.map(r => r.market))];
+const tabs = document.getElementById("siteTabs");
+sites.forEach(s => {
+  const b = document.createElement("button");
+  b.textContent = s; if (s === "All") b.className = "active";
+  b.onclick = () => { site = s; [...tabs.children].forEach(x => x.classList.remove("active")); b.classList.add("active"); render(); };
+  tabs.appendChild(b);
+});
+const msel = document.getElementById("marketSel");
+markets.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m === "All" ? "All markets" : m; msel.appendChild(o); });
+msel.onchange = () => { market = msel.value; render(); };
+document.getElementById("q").oninput = e => { query = e.target.value.toLowerCase(); render(); };
+const mc = document.getElementById("minConf");
+mc.oninput = () => { minConf = +mc.value; document.getElementById("minConfVal").textContent = mc.value; render(); };
+const head = document.getElementById("headRow");
+COLS.forEach(([key, label, num]) => {
+  const th = document.createElement("th");
+  if (num) th.className = "num";
+  th.innerHTML = label + (key === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "");
+  th.onclick = () => {
+    if (sortKey === key) sortDir = -sortDir; else { sortKey = key; sortDir = -1; }
+    [...head.children].forEach((h, i) => {
+      const k = COLS[i][0];
+      h.innerHTML = COLS[i][1] + (k === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "");
+    });
+    render();
+  };
+  head.appendChild(th);
+});
+function shade(v) {
+  if (v === null || v === undefined) return "";
+  const a = Math.max(0, Math.min(0.55, (v - 50) / 70));
+  return ' style="background:rgba(74,222,128,' + a.toFixed(2) + ')"';
+}
+function resultCell(res) {
+  const map = { W: ["HIT", "hit"], L: ["MISS", "miss"], P: ["PUSH", "push"], DNP: ["DNP", "dnp"] };
+  const m = map[res] || [res || "", ""];
+  return '<td class="' + m[1] + '">' + m[0] + "</td>";
+}
+function render() {
+  let out = rows.filter(r =>
+    (site === "All" || r.book === site) &&
+    (market === "All" || r.market === market) &&
+    (r.confidence >= minConf) &&
+    (!query || (r.player + " " + r.matchup).toLowerCase().includes(query)));
+  out.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (typeof x === "number" && typeof y === "number") return (x - y) * sortDir;
+    return String(x).localeCompare(String(y)) * sortDir;
+  });
+  document.getElementById("count").textContent = out.length + " rows shown";
+  document.getElementById("bodyRows").innerHTML = out.map(r =>
+    "<tr>" +
+    "<td>" + r.player + "</td><td>" + r.matchup + "</td><td>" + r.book + "</td><td>" + r.market + "</td>" +
+    '<td class="num">' + r.line + "</td>" +
+    '<td class="' + (r.side === "MORE" ? "more" : "less") + '">' + r.side + "</td>" +
+    '<td class="num">' + r.forecast + "</td>" +
+    (HASADJ ? '<td class="num">' + (r.exp_change_pct !== null && r.exp_change_pct !== undefined ? r.etr_now + " (" + (r.exp_change_pct >= 0 ? "+" : "") + r.exp_change_pct + "%)" : "") + "</td>" : "") +
+    '<td class="num">' + r.difference + "</td>" +
+    (GRADED ? '<td class="num">' + (r.actual ?? "") + "</td>" + resultCell(r.result) : "") +
+    '<td class="num score"' + shade(r.confidence) + ">" + (r.confidence ?? "—") + "</td>" +
+    (HASREC ? '<td class="num">' + (r.rec_confidence ?? "") + "</td>" : "") +
+    '<td class="num score"' + shade(r.matchup_score) + ">" + (r.matchup_score ?? "") + "</td>" +
+    "<td>" + r.agree + "</td>" +
+    '<td class="scen">' + (r.scenario && r.scenario.startsWith("scenario") ? r.scenario : "") + "</td>" +
+    (GRADED ? "<td>" + (r.vintage || "") + "</td>" : "") +
+    "</tr>").join("");
+}
+document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pre.html\">2026-11-05 pre</a> \u00b7 <a href=\"2026-11-05-post.html\">2026-11-05 post</a>";
+document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a></td><td>6</td><td>7</td><td>8</td></tr><tr><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td></tr><tr><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
+document.getElementById("sportNav").innerHTML = "<button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button>";
+render();
+</script>
+</body>
+</html>
