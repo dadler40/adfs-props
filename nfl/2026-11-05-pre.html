@@ -10,6 +10,10 @@
   header { padding:20px 16px 8px; max-width:1200px; margin:0 auto; }
   h1 { font-size:26px; margin:0 0 4px; letter-spacing:.5px; }
   .sub { color:#9aa4b2; font-size:14px; }
+  .betatag { color:#ffb020; font-size:13px; border:1px solid #ffb020; border-radius:4px; padding:0 5px; vertical-align:middle; }
+  .tlrec th, .tlrec td { padding:2px 10px 2px 0; text-align:left; }
+  #topLegs ul { margin:4px 0 10px 18px; padding:0; }
+  .tlflag { color:#ffb020; }
   .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
   .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
   .tabs button, .sportnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
@@ -67,6 +71,13 @@
     <thead><tr id="headRow"></tr></thead>
     <tbody id="bodyRows"></tbody>
   </table>
+  <div id="topLegs" hidden>
+    <h2>Top Legs <span class="betatag" id="topLegsTag">BETA</span></h2>
+    <p class="sub" id="topLegsBeta"></p>
+    <div id="topLegsSlips"></div>
+    <h3 id="topLegsRecHead" hidden>Rolling record</h3>
+    <div id="topLegsRecord"></div>
+  </div>
 </main>
 <footer>
   <p id="confNote"><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
@@ -96,6 +107,72 @@ const HASADJ = rows.some(r => r.exp_change_pct !== null && r.exp_change_pct !== 
 if (HASADJ) document.getElementById("adjNote").hidden = false;
 const HASREC = rows.some(r => r.rec_confidence !== null && r.rec_confidence !== undefined);
 if (HASREC) document.getElementById("recNote").hidden = false;
+// Top Legs ladders + rolling record (Daniel, Nov 5 2026; BETA).
+const TL = DATA.top_legs;
+if (TL && ((TL.slips || []).length || (TL.record || []).length)) {
+  document.getElementById("topLegs").hidden = false;
+  if (!TL.beta) document.getElementById("topLegsTag").hidden = true;
+  document.getElementById("topLegsBeta").textContent = TL.beta
+    ? "BETA — testing only, not for real money yet. The rolling record resets when this leaves beta; beta slips stay in the log for calibration study."
+    : "Rolling record counts slips issued since launch.";
+  const byBook = {};
+  (TL.slips || []).forEach(s => { (byBook[s.book] = byBook[s.book] || []).push(s); });
+  const wrap = document.getElementById("topLegsSlips");
+  Object.keys(byBook).sort().forEach(book => {
+    const h = document.createElement("h3");
+    h.textContent = book;
+    wrap.appendChild(h);
+    byBook[book].forEach(s => {
+      const d = document.createElement("div");
+      const t = document.createElement("strong");
+      t.textContent = "Top " + s.size + "-man" + (s.slip_result ? " — " + s.slip_result : "");
+      d.appendChild(t);
+      const ul = document.createElement("ul");
+      s.legs.forEach((lg, i) => {
+        const li = document.createElement("li");
+        let txt = lg.player + " " + lg.market + " " + lg.side + " " + lg.line +
+          " (forecast " + lg.forecast + ", conf " + lg.confidence + ")";
+        if (s.leg_results && s.leg_results[i]) {
+          const lr = s.leg_results[i];
+          txt += " → " + (lr.actual === null || lr.actual === undefined ? "DNP" : lr.actual) + " " + lr.result;
+        }
+        li.textContent = txt;
+        ul.appendChild(li);
+        (lg.flags || []).forEach(f => {
+          const fl = document.createElement("li");
+          fl.className = "tlflag";
+          fl.textContent = "⚠ CAUTION — " + f;
+          ul.appendChild(fl);
+        });
+      });
+      d.appendChild(ul);
+      wrap.appendChild(d);
+    });
+  });
+  if ((TL.record || []).length) {
+    document.getElementById("topLegsRecHead").hidden = false;
+    const books = [...new Set(TL.record.map(r => r.book))].sort();
+    const tbl = document.createElement("table");
+    tbl.className = "tlrec";
+    const head = document.createElement("tr");
+    ["Site", "2-man", "3-man", "4-man", "5-man"].forEach(x => {
+      const th = document.createElement("th"); th.textContent = x; head.appendChild(th);
+    });
+    tbl.appendChild(head);
+    books.forEach(b => {
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td"); td0.textContent = b; tr.appendChild(td0);
+      [2, 3, 4, 5].forEach(sz => {
+        const td = document.createElement("td");
+        const r = TL.record.find(x => x.book === b && x.size === sz);
+        td.textContent = r ? (r.w + "-" + r.l + (r.p ? "-" + r.p + "P" : "")) : "—";
+        tr.appendChild(td);
+      });
+      tbl.appendChild(tr);
+    });
+    document.getElementById("topLegsRecord").appendChild(tbl);
+  }
+}
 document.getElementById("meta").textContent =
   DATA.date + " · vintage " + DATA.vintage_tag + " · updated " + (DATA.generated_at || "") + " · " + rows.length + " suggestions";
 const NFL = DATA.sport === "nfl";
@@ -224,7 +301,7 @@ function render() {
     (GRADED ? "<td>" + (r.vintage || "") + "</td>" : "") +
     "</tr>").join("");
 }
-document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pre.html\">2026-11-05</a>";
+document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pre.html\">2026-11-05 pre</a> \u00b7 <a href=\"2026-11-05-post.html\">2026-11-05 post</a>";
 document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a></td><td>6</td><td>7</td><td>8</td></tr><tr><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td></tr><tr><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
 document.getElementById("sportNav").innerHTML = "<button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button>";
 render();
