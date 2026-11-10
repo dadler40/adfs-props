@@ -45,13 +45,19 @@
   .recline { margin-left:16px; color:#e6ebf2; font-weight:600; white-space:nowrap; }
   .hit { color:#4ade80; font-weight:700; } .miss { color:#f87171; font-weight:700; }
   .push { color:#9aa4b2; font-weight:700; } .dnp { color:#5b6572; font-weight:700; }
+  .info { display:inline-block; margin-left:5px; width:15px; height:15px; line-height:15px; text-align:center; border:1px solid #4a5568; border-radius:50%; color:#9ec1ff; font-size:11px; cursor:pointer; vertical-align:1px; }
+  .info:hover { background:#24314a; }
+  .infolink { color:#7db4ff; cursor:pointer; text-decoration:underline dotted; font-size:13px; margin-left:8px; }
+  #explainer { display:none; margin:8px 0; padding:8px 12px; background:#16202e; border:1px solid #2b4a73; border-radius:6px; color:#dbe7f5; font-size:14px; max-width:900px; }
+  #explainer strong { color:#9ec1ff; }
 </style>
 </head>
 <body>
 <header>
   <h1>ADFS PROPS</h1>
   <div class="sportnav" id="sportNav"></div>
-  <div class="sub" id="meta"></div>
+  <div class="sub"><span id="meta"></span><span class="infolink" id="vintageHelp">what's a vintage?</span></div>
+  <div id="explainer"></div>
   <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
   <div class="controls" id="refreshRow" style="display:none">
     <button id="refreshBtn" type="button">&#8635; Refresh now</button>
@@ -61,6 +67,7 @@
   <div class="controls">
     <span class="tabs" id="siteTabs"></span>
     <select id="marketSel"></select>
+    <select id="scenSel"></select>
     <input type="search" id="q" placeholder="Search player or matchup">
     <label>Min confidence <input type="range" id="minConf" min="0" max="85" step="5" value="0"> <span id="minConfVal">0</span></label>
     <span class="recline" id="confRecords"></span>
@@ -103,7 +110,29 @@ const COLS = [
   ["matchup_score","Matchup Score",1],["agree","Agree",0],["scenario","Scenario",0],
   ...(GRADED ? [["vintage","Vintage",0]] : [])
 ];
-let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = "", minConf = 0;
+let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = "", minConf = 0, scen = "All";
+// Click-to-see definitions (Daniel, Nov 10 2026): every piece of
+// jargon on the board explains itself in place via the ? chips.
+const DEFS = {
+  vintage: ["Vintage", "Which release of ETR's projections this page was built from. ETR updates its numbers during the day — 1100 is the ~11 AM set, noon the midday set, prelock the final set before games lock, live the board's latest refresh (it rebuilds when a newer ETR set appears), and morning (NFL) the early weekly set. A player's forecast can change between vintages as ETR's information changes."],
+  forecast: ["Forecast", "Our number for the stat, built from ETR's projections by three estimators (A/B/C) and combined. On pre-final pages it is the guess at ETR's FINAL number, not just the current one."],
+  exp_change_pct: ["ETR now (Δ exp)", "The player's current ETR projection, plus the total % move expected into ETR's final set — normal drift plus any injury-news adjustment. The Forecast column already includes that expected move."],
+  difference: ["Difference", "Forecast minus the site's line (shown as an absolute value, in the stat's own units). Bigger is not automatically better — at large gaps the graded record says the market has usually been right more often than the model."],
+  confidence: ["Confidence", "Pilot model score (0–100): the hit probability implied by how far the forecast sits from the line versus the graded error for that stat, widened when the three estimators disagree, capped at 59 when our own estimators straddle the gap or the row is scenario-sensitive, and capped at 85 until calibrated. It is NOT yet a calibrated hit rate — Rec. Conf is the graded reality check."],
+  rec_confidence: ["Rec. Conf", "Recommended confidence: what rows like this one have actually hit at, from the graded record — same stat, same model-confidence band, shrunk toward 50%. Shown once a band has 10+ graded rows."],
+  matchup_score: ["Matchup Score", "Game-environment score (0–100): 60% how fantasy-rich the game projects (both teams' totals ranked against today's other games) + 40% the player's share of his own team's projection."],
+  agree: ["Agree", "Whether all three estimators (A/B/C) land on the same side of the line (ALL MORE / ALL LESS) or split. When they split, they disagree about the direction itself, and confidence is discounted for it."],
+  scenario: ["Scenario", "The injury/lineup situation a forecast depends on. 'scenario-sensitive — X OUT' means the number comes from the ETR set where X sits out — if X actually plays, the forecast is wrong in a known direction, so confidence on scenario rows is capped at 59. The Scenario dropdown above filters to one situation at a time."]
+};
+function showDef(key) {
+  const d = DEFS[key]; if (!d) return;
+  const el = document.getElementById("explainer");
+  if (el.dataset.key === key && el.style.display === "block") { el.style.display = "none"; el.dataset.key = ""; return; }
+  el.innerHTML = "<strong>" + d[0] + ":</strong> " + d[1];
+  el.dataset.key = key; el.style.display = "block";
+}
+document.getElementById("vintageHelp").onclick = () => showDef("vintage");
+function dispScen(r) { return (r.scenario && r.scenario.startsWith("scenario")) ? r.scenario : ""; }
 const rows = DATA.rows || [];
 const HASADJ = rows.some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined);
 if (HASADJ) document.getElementById("adjNote").hidden = false;
@@ -246,24 +275,46 @@ sites.forEach(s => {
 const msel = document.getElementById("marketSel");
 markets.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m === "All" ? "All markets" : m; msel.appendChild(o); });
 msel.onchange = () => { market = msel.value; render(); };
+// One dropdown entry per distinct scenario on the page (Daniel,
+// Nov 10 2026), plus "No scenario" for the base rows. Hidden when
+// the page has no scenario rows at all.
+const ssel = document.getElementById("scenSel");
+const scenVals = [...new Set(rows.map(dispScen))];
+{
+  const o = document.createElement("option"); o.value = "All"; o.textContent = "All scenarios"; ssel.appendChild(o);
+  scenVals.filter(s => s).sort().forEach(s => { const o = document.createElement("option"); o.value = s; o.textContent = s; ssel.appendChild(o); });
+  if (scenVals.includes("")) { const o = document.createElement("option"); o.value = "__none__"; o.textContent = "No scenario"; ssel.appendChild(o); }
+  if (!scenVals.some(s => s)) ssel.style.display = "none";
+}
+ssel.onchange = () => { scen = ssel.value; render(); };
 document.getElementById("q").oninput = e => { query = e.target.value.toLowerCase(); render(); };
 const mc = document.getElementById("minConf");
 mc.oninput = () => { minConf = +mc.value; document.getElementById("minConfVal").textContent = mc.value; render(); };
 const head = document.getElementById("headRow");
-COLS.forEach(([key, label, num]) => {
+function headHTML(i) {
+  const [k, label] = COLS[i];
+  return label +
+    (k === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "") +
+    (DEFS[k] ? ' <span class="info" data-def="' + k + '">?</span>' : "");
+}
+function wireInfo() {
+  head.querySelectorAll(".info").forEach(sp => {
+    sp.onclick = e => { e.stopPropagation(); showDef(sp.dataset.def); };
+  });
+}
+COLS.forEach(([key, label, num], i) => {
   const th = document.createElement("th");
   if (num) th.className = "num";
-  th.innerHTML = label + (key === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "");
+  th.innerHTML = headHTML(i);
   th.onclick = () => {
     if (sortKey === key) sortDir = -sortDir; else { sortKey = key; sortDir = -1; }
-    [...head.children].forEach((h, i) => {
-      const k = COLS[i][0];
-      h.innerHTML = COLS[i][1] + (k === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "");
-    });
+    [...head.children].forEach((h, j) => { h.innerHTML = headHTML(j); });
+    wireInfo();
     render();
   };
   head.appendChild(th);
 });
+wireInfo();
 function shade(v) {
   if (v === null || v === undefined) return "";
   const a = Math.max(0, Math.min(0.55, (v - 50) / 70));
@@ -308,6 +359,7 @@ function render() {
   let out = rows.filter(r =>
     (site === "All" || r.book === site) &&
     (market === "All" || r.market === market) &&
+    (scen === "All" || (scen === "__none__" ? dispScen(r) === "" : dispScen(r) === scen)) &&
     (r.confidence >= minConf) &&
     (!query || (r.player + " " + r.matchup).toLowerCase().includes(query)));
   out.sort((a, b) => {
@@ -330,7 +382,7 @@ function render() {
     (HASREC ? '<td class="num">' + (r.rec_confidence ?? "") + "</td>" : "") +
     '<td class="num score"' + shade(r.matchup_score) + ">" + (r.matchup_score ?? "") + "</td>" +
     "<td>" + r.agree + "</td>" +
-    '<td class="scen">' + (r.scenario && r.scenario.startsWith("scenario") ? r.scenario : "") + "</td>" +
+    '<td class="scen">' + dispScen(r) + "</td>" +
     (GRADED ? "<td>" + (r.vintage || "") + "</td>" : "") +
     "</tr>").join("");
 }
