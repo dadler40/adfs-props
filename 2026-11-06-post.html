@@ -133,6 +133,10 @@ function showDef(key) {
 }
 document.getElementById("vintageHelp").onclick = () => showDef("vintage");
 function dispScen(r) { return (r.scenario && r.scenario.startsWith("scenario")) ? r.scenario : ""; }
+// The filter groups by SITUATION: row labels carry the row's own
+// resulting number after an arrow ("... OUT → 39.1" vs "... → 39.2"
+// are the same situation), so strip the tail for grouping.
+function scenKey(r) { return dispScen(r).replace(/ → [\d.]+$/, ""); }
 const rows = DATA.rows || [];
 const HASADJ = rows.some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined);
 if (HASADJ) document.getElementById("adjNote").hidden = false;
@@ -279,7 +283,7 @@ msel.onchange = () => { market = msel.value; render(); };
 // Nov 10 2026), plus "No scenario" for the base rows. Hidden when
 // the page has no scenario rows at all.
 const ssel = document.getElementById("scenSel");
-const scenVals = [...new Set(rows.map(dispScen))];
+const scenVals = [...new Set(rows.map(scenKey))];
 {
   const o = document.createElement("option"); o.value = "All"; o.textContent = "All scenarios"; ssel.appendChild(o);
   scenVals.filter(s => s).sort().forEach(s => { const o = document.createElement("option"); o.value = s; o.textContent = s; ssel.appendChild(o); });
@@ -359,7 +363,7 @@ function render() {
   let out = rows.filter(r =>
     (site === "All" || r.book === site) &&
     (market === "All" || r.market === market) &&
-    (scen === "All" || (scen === "__none__" ? dispScen(r) === "" : dispScen(r) === scen)) &&
+    (scen === "All" || (scen === "__none__" ? scenKey(r) === "" : scenKey(r) === scen)) &&
     (r.confidence >= minConf) &&
     (!query || (r.player + " " + r.matchup).toLowerCase().includes(query)));
   out.sort((a, b) => {
