@@ -267,12 +267,18 @@ if (DATA.summary) {
     btn.style.display = "none";
   }
 })();
-const sites = ["All", ...new Set(rows.map(r => r.book))];
+// Site tabs for EVERY book, always (Daniel, Nov 11 2026) — a page
+// whose rows happen to carry one book still shows all tabs; a book
+// with no rows on the page is dimmed and shows 0 rows when picked.
+// Any book present in rows but not in the canonical list is appended.
+const CANON_SITES = NFL ? ["Sleeper", "Underdog"] : ["PrizePicks", "Sleeper", "Underdog"];
+const sites = ["All", ...CANON_SITES, ...[...new Set(rows.map(r => r.book))].filter(b => !CANON_SITES.includes(b))];
 const markets = ["All", ...new Set(rows.map(r => r.market))];
 const tabs = document.getElementById("siteTabs");
 sites.forEach(s => {
   const b = document.createElement("button");
   b.textContent = s; if (s === "All") b.className = "active";
+  if (s !== "All" && !rows.some(r => r.book === s)) b.style.opacity = "0.45";
   b.onclick = () => { site = s; [...tabs.children].forEach(x => x.classList.remove("active")); b.classList.add("active"); render(); };
   tabs.appendChild(b);
 });
