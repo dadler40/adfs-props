@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADFS PROPS — Pilot</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#0e1116; color:#e6e9ee; margin:0; }
+  header { padding:20px 16px 8px; max-width:1200px; margin:0 auto; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:.5px; }
+  .sub { color:#9aa4b2; font-size:14px; }
+  .betatag { color:#ffb020; font-size:13px; border:1px solid #ffb020; border-radius:4px; padding:0 5px; vertical-align:middle; }
+  .tlrec th, .tlrec td { padding:2px 10px 2px 0; text-align:left; }
+  #topLegs ul { margin:4px 0 10px 18px; padding:0; }
+  .tlflag { color:#ffb020; }
+  .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
+  .tabs button, .sportnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  #refreshBtn { cursor:pointer; } #refreshBtn:disabled { opacity:.5; cursor:default; }
+  .tabs button.active, .sportnav button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .sportnav { margin:2px 0 8px; display:flex; gap:8px; }
+  label { font-size:13px; color:#9aa4b2; }
+  main { max-width:1200px; margin:0 auto; padding:0 16px 24px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { padding:6px 8px; border-bottom:1px solid #232a34; text-align:left; white-space:nowrap; }
+  th { cursor:pointer; user-select:none; position:sticky; top:0; background:#141922; }
+  th:hover { color:#7db4ff; }
+  th .dir { font-size:10px; color:#7db4ff; }
+  td.num, th.num { text-align:right; }
+  .score { font-weight:600; border-radius:4px; }
+  .more { color:#4ade80; } .less { color:#f87171; }
+  .scen { color:#ffd75e; font-size:12px; }
+  footer { max-width:1200px; margin:0 auto; padding:0 16px 32px; color:#9aa4b2; font-size:13px; line-height:1.5; }
+  footer a { color:#7db4ff; }
+  .count { color:#9aa4b2; font-size:13px; margin:6px 0; }
+  #calendar { margin:12px 0 2px; }
+  .cal-month { display:inline-block; vertical-align:top; margin:0 18px 8px 0; }
+  .cal-month h3 { margin:4px 0 6px; font-size:15px; }
+  table.cal { border-collapse:collapse; width:auto; font-size:12px; }
+  table.cal th, table.cal td { border:1px solid #232a34; padding:4px 5px; text-align:center; min-width:46px; }
+  table.cal td.off { color:#39424e; }
+  table.cal a { color:#7db4ff; text-decoration:none; font-weight:700; font-size:14px; }
+  .cal-rec { font-size:10px; color:#9aa4b2; white-space:nowrap; }
+  .recline { margin-left:16px; color:#e6ebf2; font-weight:600; white-space:nowrap; }
+  .hit { color:#4ade80; font-weight:700; } .miss { color:#f87171; font-weight:700; }
+  .push { color:#9aa4b2; font-weight:700; } .dnp { color:#5b6572; font-weight:700; }
+  .info { display:inline-block; margin-left:5px; width:15px; height:15px; line-height:15px; text-align:center; border:1px solid #4a5568; border-radius:50%; color:#9ec1ff; font-size:11px; cursor:pointer; vertical-align:1px; }
+  .info:hover { background:#24314a; }
+  .infolink { color:#7db4ff; cursor:pointer; text-decoration:underline dotted; font-size:13px; margin-left:8px; }
+  #explainer { display:none; margin:8px 0; padding:8px 12px; background:#16202e; border:1px solid #2b4a73; border-radius:6px; color:#dbe7f5; font-size:14px; max-width:900px; }
+  #explainer strong { color:#9ec1ff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ADFS PROPS</h1>
+  <div class="sportnav" id="sportNav"></div>
+  <div class="sub"><span id="meta"></span><span class="infolink" id="vintageHelp">what's a vintage?</span></div>
+  <div id="explainer"></div>
+  <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
+  <div class="controls" id="refreshRow" style="display:none">
+    <button id="refreshBtn" type="button">&#8635; Refresh now</button>
+    <span class="sub" id="refreshMsg"></span>
+    <span class="sub" id="stamps"></span>
+  </div>
+  <div class="controls">
+    <span class="tabs" id="siteTabs"></span>
+    <select id="marketSel"></select>
+    <select id="scenSel"></select>
+    <input type="search" id="q" placeholder="Search player or matchup">
+    <label>Min confidence <input type="range" id="minConf" min="0" max="85" step="5" value="0"> <span id="minConfVal">0</span></label>
+    <span class="recline" id="confRecords"></span>
+  </div>
+  <div class="count" id="count"></div>
+  <div id="calendar"></div>
+</header>
+<main>
+  <table id="board">
+    <thead><tr id="headRow"></tr></thead>
+    <tbody id="bodyRows"></tbody>
+  </table>
+  <div id="topLegs" hidden>
+    <h2>Top Legs <span class="betatag" id="topLegsTag">BETA</span></h2>
+    <p class="sub" id="topLegsBeta"></p>
+    <div id="topLegsSlips"></div>
+    <h3 id="topLegsRecHead" hidden>Rolling record</h3>
+    <div id="topLegsRecord"></div>
+  </div>
+</main>
+<footer>
+  <p id="confNote"><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
+  <p id="adjNote" hidden><strong>ETR now (Δ exp)</strong>: on pre-final issues the Forecast is the best guess at the FINAL ETR number. This column shows the current ETR projection and the total expected move into the final set — ETR's morning→final drift plus a per-player adjustment when the day's injury news implies one. At the pre-lock issue the final set is in and the column disappears.</p>
+  <p id="recNote" hidden><strong>Rec. Conf</strong> (recommended confidence): the hit rate of graded rows issued in the same market at the same model-confidence band, shrunk toward 50% — it is what the graded record says a score like this has actually been worth. Appears once a band has 10+ graded rows, and sharpens as more slates grade out.</p>
+  <p><strong>Matchup Score</strong> (0–100): 60% game environment (both teams' total projected fantasy points, ranked against today's other games) + 40% the player's share of his own team's projection. Higher = better environment for his number.</p>
+  <p><strong>Difference</strong>: our forecast minus the site's line, in points (absolute). <strong>Agree</strong>: whether all three estimators (A/B/C) land on the same side of the line.</p>
+  <p id="archive"></p>
+</footer>
+<script>
+const DATA = {"date": "2026-11-12", "sport": "nfl", "vintage_tag": "morning", "generated_at": "2026-11-12T11:08:26-06:00", "rows": [{"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Pass Att", "market_key": "passingattempts", "line": 31.5, "side": "LESS", "forecast": 26.52, "difference": 4.98, "confidence": 85, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)", "rec_confidence": 60}, {"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Pass Att", "market_key": "passingattempts", "line": 31.5, "side": "LESS", "forecast": 26.52, "difference": 4.98, "confidence": 85, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)", "rec_confidence": 60}, {"player": "J.J. McCarthy", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Pass Att", "market_key": "passingattempts", "line": 29.5, "side": "LESS", "forecast": 25.67, "difference": 3.83, "confidence": 85, "matchup_score": 47, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.87)", "rec_confidence": 60}, {"player": "J.J. McCarthy", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Pass Att", "market_key": "passingattempts", "line": 29.5, "side": "LESS", "forecast": 25.67, "difference": 3.83, "confidence": 85, "matchup_score": 47, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.87)", "rec_confidence": 60}, {"player": "Dominic Zvada", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "XP Made", "market_key": "extrapointmade", "line": 1.5, "side": "MORE", "forecast": 2.55, "difference": 1.05, "confidence": 85, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.04)", "rec_confidence": 42}, {"player": "Dominic Zvada", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "XP Made", "market_key": "extrapointmade", "line": 1.5, "side": "MORE", "forecast": 2.55, "difference": 1.05, "confidence": 85, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.04)", "rec_confidence": 42}, {"player": "Drew Stevens", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "XP Made", "market_key": "extrapointmade", "line": 1.5, "side": "MORE", "forecast": 2.37, "difference": 0.87, "confidence": 85, "matchup_score": 37, "agree": "Sleeper proj", "scenario": "Sleeper projections", "rec_confidence": 42}, {"player": "Drew Stevens", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "XP Made", "market_key": "extrapointmade", "line": 1.5, "side": "MORE", "forecast": 2.37, "difference": 0.87, "confidence": 85, "matchup_score": 37, "agree": "Sleeper proj", "scenario": "Sleeper projections", "rec_confidence": 42}, {"player": "Isaiah Likely", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Targets", "market_key": "targets", "line": 7.5, "side": "LESS", "forecast": 5.36, "difference": 2.14, "confidence": 83, "matchup_score": 43, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.86)"}, {"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Completions", "market_key": "passingcompletions", "line": 19.5, "side": "LESS", "forecast": 16.58, "difference": 2.92, "confidence": 82, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)", "rec_confidence": 59}, {"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Completions", "market_key": "passingcompletions", "line": 19.5, "side": "LESS", "forecast": 16.58, "difference": 2.92, "confidence": 82, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)", "rec_confidence": 59}, {"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Pass Yds", "market_key": "passing_yards", "line": 202.5, "side": "LESS", "forecast": 167.35, "difference": 35.15, "confidence": 74, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)"}, {"player": "Malik Nabers", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Targets", "market_key": "targets", "line": 9.5, "side": "LESS", "forecast": 8.06, "difference": 1.44, "confidence": 74, "matchup_score": 48, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.90)"}, {"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Pass+Rush Yds", "market_key": "passingandrushingyards", "line": 245.5, "side": "LESS", "forecast": 210.8, "difference": 34.7, "confidence": 73, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)"}, {"player": "J.J. McCarthy", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Completions", "market_key": "passingcompletions", "line": 18.5, "side": "LESS", "forecast": 16.5, "difference": 2.0, "confidence": 73, "matchup_score": 47, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.87)", "rec_confidence": 39}, {"player": "Drew Stevens", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 6.5, "side": "MORE", "forecast": 8.04, "difference": 1.54, "confidence": 72, "matchup_score": 37, "agree": "Sleeper proj", "scenario": "Sleeper projections", "rec_confidence": 72}, {"player": "Drew Stevens", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 6.5, "side": "MORE", "forecast": 8.04, "difference": 1.54, "confidence": 72, "matchup_score": 37, "agree": "Sleeper proj", "scenario": "Sleeper projections", "rec_confidence": 72}, {"player": "Jayden Daniels", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Pass+Rush Yds", "market_key": "passingandrushingyards", "line": 242.5, "side": "LESS", "forecast": 210.8, "difference": 31.7, "confidence": 71, "matchup_score": 49, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.89)"}, {"player": "Austin Ekeler", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Rush Yds", "market_key": "rushing_yards", "line": 29.5, "side": "MORE", "forecast": 41.79, "difference": 12.29, "confidence": 71, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.04)", "rec_confidence": 52}, {"player": "Rachaad White", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Rush Yds", "market_key": "rushing_yards", "line": 38.5, "side": "MORE", "forecast": 50.46, "difference": 11.96, "confidence": 71, "matchup_score": 42, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.95)", "rec_confidence": 52}, {"player": "Austin Ekeler", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Rush Yds", "market_key": "rushing_yards", "line": 29.5, "side": "MORE", "forecast": 41.42, "difference": 11.92, "confidence": 71, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.03)", "rec_confidence": 52}, {"player": "Rachaad White", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Rush Yds", "market_key": "rushing_yards", "line": 38.5, "side": "MORE", "forecast": 49.79, "difference": 11.29, "confidence": 70, "matchup_score": 42, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.94)", "rec_confidence": 52}, {"player": "Dominic Zvada", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 7.5, "side": "MORE", "forecast": 8.89, "difference": 1.39, "confidence": 70, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.04)", "rec_confidence": 72}, {"player": "Dominic Zvada", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Kicking Pts", "market_key": "kickingpoints", "line": 7.5, "side": "MORE", "forecast": 8.89, "difference": 1.39, "confidence": 70, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.04)", "rec_confidence": 72}, {"player": "Austin Ekeler", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 40.5, "side": "MORE", "forecast": 54.22, "difference": 13.72, "confidence": 68, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.04)", "rec_confidence": 58}, {"player": "Cam Skattebo", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 7.5, "side": "MORE", "forecast": 17.57, "difference": 10.07, "confidence": 66, "matchup_score": 44, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.94)", "rec_confidence": 56}, {"player": "Cam Skattebo", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 8.5, "side": "MORE", "forecast": 18.11, "difference": 9.61, "confidence": 66, "matchup_score": 44, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.97)", "rec_confidence": 56}, {"player": "Malachi Fields", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Targets", "market_key": "targets", "line": 4.5, "side": "LESS", "forecast": 3.62, "difference": 0.88, "confidence": 66, "matchup_score": 33, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.96)"}, {"player": "Darnell Mooney", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 14.5, "side": "MORE", "forecast": 23.67, "difference": 9.17, "confidence": 65, "matchup_score": 28, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.50)", "rec_confidence": 56}, {"player": "J.J. McCarthy", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Rush Att", "market_key": "rushingattempts", "line": 4.5, "side": "LESS", "forecast": 3.19, "difference": 1.31, "confidence": 65, "matchup_score": 47, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.87)", "rec_confidence": 55}, {"player": "J.J. McCarthy", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Rush Att", "market_key": "rushingattempts", "line": 4.5, "side": "LESS", "forecast": 3.19, "difference": 1.31, "confidence": 65, "matchup_score": 47, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.87)", "rec_confidence": 55}, {"player": "Devin Singletary", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Rush Att", "market_key": "rushingattempts", "line": 6.5, "side": "MORE", "forecast": 7.78, "difference": 1.28, "confidence": 65, "matchup_score": 34, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.78)", "rec_confidence": 55}, {"player": "Cam Skattebo", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "FP", "market_key": "fantasy_points", "line": 8.95, "side": "MORE", "forecast": 11.3, "difference": 2.35, "confidence": 64, "matchup_score": 44, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 54}, {"player": "Darnell Mooney", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 15.5, "side": "MORE", "forecast": 23.42, "difference": 7.92, "confidence": 63, "matchup_score": 28, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.48)", "rec_confidence": 56}, {"player": "Austin Ekeler", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "FP", "market_key": "fantasy_points", "line": 6.7, "side": "MORE", "forecast": 8.8, "difference": 2.1, "confidence": 63, "matchup_score": 40, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 54}, {"player": "Austin Ekeler", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 44.5, "side": "MORE", "forecast": 53.73, "difference": 9.23, "confidence": 62, "matchup_score": 40, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.03)", "rec_confidence": 58}, {"player": "Cam Skattebo", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 70.5, "side": "MORE", "forecast": 79.43, "difference": 8.93, "confidence": 62, "matchup_score": 44, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.97)", "rec_confidence": 58}, {"player": "Cam Skattebo", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 68.5, "side": "MORE", "forecast": 77.05, "difference": 8.55, "confidence": 61, "matchup_score": 44, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.94)", "rec_confidence": 58}, {"player": "Rachaad White", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "Rush+Rec Yds", "market_key": "rushingandreceivingyards", "line": 55.5, "side": "MORE", "forecast": 63.68, "difference": 8.18, "confidence": 61, "matchup_score": 42, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.95)", "rec_confidence": 58}, {"player": "Malachi Fields", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 25.5, "side": "MORE", "forecast": 32.05, "difference": 6.55, "confidence": 61, "matchup_score": 33, "agree": "Sleeper proj", "scenario": "Sleeper projections", "rec_confidence": 56}, {"player": "Malik Nabers", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "Rec Yds", "market_key": "receiving_yards", "line": 66.5, "side": "MORE", "forecast": 72.94, "difference": 6.44, "confidence": 61, "matchup_score": 48, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.90)", "rec_confidence": 56}, {"player": "Stefon Diggs", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "FP", "market_key": "fantasy_points", "line": 6.65, "side": "MORE", "forecast": 8.5, "difference": 1.85, "confidence": 61, "matchup_score": 43, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 54}, {"player": "Malik Nabers", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 67.5, "side": "MORE", "forecast": 73.81, "difference": 6.31, "confidence": 60, "matchup_score": 48, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d70.91)", "rec_confidence": 56}, {"player": "Antonio Williams", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "Rec Yds", "market_key": "receiving_yards", "line": 36.5, "side": "MORE", "forecast": 42.52, "difference": 6.02, "confidence": 60, "matchup_score": 42, "agree": "Sleeper proj \u00d7 ETR pin", "scenario": "Sleeper projections, pinned to ETR FP (\u00d71.28)", "rec_confidence": 56}, {"player": "Stefon Diggs", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Sleeper", "market": "FP", "market_key": "fantasy_points", "line": 9.0, "side": "MORE", "forecast": 10.6, "difference": 1.6, "confidence": 60, "matchup_score": 43, "agree": "ETR+Sleeper", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 54}, {"player": "J.J. McCarthy", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Underdog", "market": "FP", "market_key": "fantasy_points", "line": 16.25, "side": "LESS", "forecast": 14.5, "difference": 1.75, "confidence": 55, "matchup_score": 47, "agree": "split", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 62}, {"player": "Antonio Williams", "team": "WAS", "opp": "NYG", "matchup": "WAS vs NYG", "book": "Underdog", "market": "FP", "market_key": "fantasy_points", "line": 6.05, "side": "MORE", "forecast": 7.6, "difference": 1.55, "confidence": 53, "matchup_score": 42, "agree": "split", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 62}, {"player": "Darnell Mooney", "team": "NYG", "opp": "WAS", "matchup": "NYG vs WAS", "book": "Sleeper", "market": "FP", "market_key": "fantasy_points", "line": 3.1, "side": "MORE", "forecast": 4.6, "difference": 1.5, "confidence": 53, "matchup_score": 28, "agree": "split", "scenario": "ETR weekly (2026-11-11_etr-nfl-projections-week10.csv)", "rec_confidence": 62}], "conf_note": "<strong>Confidence</strong> (0\u2013100): pilot model score from <strong>provisional v1 per-market sigmas</strong> \u2014 the NFL layer has no clean graded sample yet, so these are scale constants, not calibrated error rates. They are replaced by graded NFL sigmas as slates grade out. FP forecasts are ETR weekly projections scored per site (Sleeper/PrizePicks full PPR, Underdog half PPR); stat forecasts are Sleeper projections. Not a calibrated hit rate.", "rolling_by_conf": [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 2, 0], [2, 4, 0], [4, 2, 0], [2, 0, 0], [6, 2, 0], [0, 2, 0], [12, 2, 0], [30, 14, 0], [33, 31, 0], [16, 19, 0], [24, 20, 0], [27, 21, 0], [30, 13, 0], [19, 13, 0], [27, 10, 0], [13, 9, 0], [18, 15, 0], [7, 10, 0], [16, 12, 0], [14, 6, 0], [14, 6, 0], [7, 6, 0], [10, 8, 0], [11, 2, 0], [4, 4, 0], [6, 4, 0], [8, 8, 0], [4, 8, 0], [6, 0, 0], [2, 6, 0], [10, 2, 0], [6, 2, 0], [28, 20, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]};
+const GRADED = !!DATA.graded;
+const COLS = [
+  ["player","Player",0],["matchup","Matchup",0],["book","Site",0],["market","Market",0],
+  ["line","Line",1],["side","Side",0],["forecast","Forecast",1],
+  ...((DATA.rows || []).some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined) ? [["exp_change_pct","ETR now (Δ exp)",1]] : []),
+  ["difference","Difference",1],
+  ...(GRADED ? [["actual","Actual",1],["result","Result",0]] : []),
+  ["confidence","Confidence",1],
+  ...((DATA.rows || []).some(r => r.rec_confidence !== null && r.rec_confidence !== undefined) ? [["rec_confidence","Rec. Conf",1]] : []),
+  ["matchup_score","Matchup Score",1],["agree","Agree",0],["scenario","Scenario",0],
+  ...(GRADED ? [["vintage","Vintage",0]] : [])
+];
+let sortKey = "confidence", sortDir = -1, site = "All", market = "All", query = "", minConf = 0, scen = "All";
+// Click-to-see definitions (Daniel, Nov 10 2026): every piece of
+// jargon on the board explains itself in place via the ? chips.
+const DEFS = {
+  vintage: ["Vintage", "Which release of ETR's projections this page was built from. ETR updates its numbers during the day — 1100 is the ~11 AM set, noon the midday set, prelock the final set before games lock, live the board's latest refresh (it rebuilds when a newer ETR set appears), and morning (NFL) the early weekly set. A player's forecast can change between vintages as ETR's information changes."],
+  forecast: ["Forecast", "Our number for the stat, built from ETR's projections by three estimators (A/B/C) and combined. On pre-final pages it is the guess at ETR's FINAL number, not just the current one."],
+  exp_change_pct: ["ETR now (Δ exp)", "The player's current ETR projection, plus the total % move expected into ETR's final set — normal drift plus any injury-news adjustment. The Forecast column already includes that expected move."],
+  difference: ["Difference", "Forecast minus the site's line (shown as an absolute value, in the stat's own units). Bigger is not automatically better — at large gaps the graded record says the market has usually been right more often than the model."],
+  confidence: ["Confidence", "Pilot model score (0–100): the hit probability implied by how far the forecast sits from the line versus the graded error for that stat, widened when the three estimators disagree, capped at 59 when our own estimators straddle the gap or the row is scenario-sensitive, and capped at 85 until calibrated. It is NOT yet a calibrated hit rate — Rec. Conf is the graded reality check."],
+  rec_confidence: ["Rec. Conf", "Recommended confidence: what rows like this one have actually hit at, from the graded record — same stat, same model-confidence band, shrunk toward 50%. Shown once a band has 10+ graded rows."],
+  matchup_score: ["Matchup Score", "Game-environment score (0–100): 60% how fantasy-rich the game projects (both teams' totals ranked against today's other games) + 40% the player's share of his own team's projection."],
+  agree: ["Agree", "Whether all three estimators (A/B/C) land on the same side of the line (ALL MORE / ALL LESS) or split. When they split, they disagree about the direction itself, and confidence is discounted for it."],
+  scenario: ["Scenario", "The injury/lineup situation a forecast depends on. 'scenario-sensitive — X OUT' means the number comes from the ETR set where X sits out — if X actually plays, the forecast is wrong in a known direction, so confidence on scenario rows is capped at 59. The Scenario dropdown above filters to one situation at a time."]
+};
+function showDef(key) {
+  const d = DEFS[key]; if (!d) return;
+  const el = document.getElementById("explainer");
+  if (el.dataset.key === key && el.style.display === "block") { el.style.display = "none"; el.dataset.key = ""; return; }
+  el.innerHTML = "<strong>" + d[0] + ":</strong> " + d[1];
+  el.dataset.key = key; el.style.display = "block";
+}
+document.getElementById("vintageHelp").onclick = () => showDef("vintage");
+function dispScen(r) { return (r.scenario && r.scenario.startsWith("scenario")) ? r.scenario : ""; }
+// The filter groups by SITUATION: row labels carry the row's own
+// resulting number after an arrow ("... OUT → 39.1" vs "... → 39.2"
+// are the same situation), so strip the tail for grouping.
+function scenKey(r) { return dispScen(r).replace(/ → [\d.]+$/, ""); }
+const rows = DATA.rows || [];
+const HASADJ = rows.some(r => r.exp_change_pct !== null && r.exp_change_pct !== undefined);
+if (HASADJ) document.getElementById("adjNote").hidden = false;
+const HASREC = rows.some(r => r.rec_confidence !== null && r.rec_confidence !== undefined);
+if (HASREC) document.getElementById("recNote").hidden = false;
+// Top Legs ladders + rolling record (Daniel, Nov 5 2026; BETA).
+const TL = DATA.top_legs;
+if (TL && ((TL.slips || []).length || (TL.record || []).length)) {
+  document.getElementById("topLegs").hidden = false;
+  if (!TL.beta) document.getElementById("topLegsTag").hidden = true;
+  document.getElementById("topLegsBeta").textContent = TL.beta
+    ? "BETA — testing only, not for real money yet. The rolling record resets when this leaves beta; beta slips stay in the log for calibration study."
+    : "Rolling record counts slips issued since launch.";
+  const byBook = {};
+  (TL.slips || []).forEach(s => { (byBook[s.book] = byBook[s.book] || []).push(s); });
+  const wrap = document.getElementById("topLegsSlips");
+  Object.keys(byBook).sort().forEach(book => {
+    const h = document.createElement("h3");
+    h.textContent = book;
+    wrap.appendChild(h);
+    byBook[book].forEach(s => {
+      const d = document.createElement("div");
+      const t = document.createElement("strong");
+      t.textContent = "Top " + s.size + "-man" + (s.slip_result ? " — " + s.slip_result : "");
+      d.appendChild(t);
+      const ul = document.createElement("ul");
+      s.legs.forEach((lg, i) => {
+        const li = document.createElement("li");
+        let txt = lg.player + " " + lg.market + " " + lg.side + " " + lg.line +
+          " (forecast " + lg.forecast + ", conf " + lg.confidence + ")";
+        if (s.leg_results && s.leg_results[i]) {
+          const lr = s.leg_results[i];
+          txt += " → " + (lr.actual === null || lr.actual === undefined ? "DNP" : lr.actual) + " " + lr.result;
+        }
+        li.textContent = txt;
+        ul.appendChild(li);
+        (lg.flags || []).forEach(f => {
+          const fl = document.createElement("li");
+          fl.className = "tlflag";
+          fl.textContent = "⚠ CAUTION — " + f;
+          ul.appendChild(fl);
+        });
+      });
+      d.appendChild(ul);
+      wrap.appendChild(d);
+    });
+  });
+  if ((TL.record || []).length) {
+    document.getElementById("topLegsRecHead").hidden = false;
+    const books = [...new Set(TL.record.map(r => r.book))].sort();
+    const tbl = document.createElement("table");
+    tbl.className = "tlrec";
+    const head = document.createElement("tr");
+    ["Site", "2-man", "3-man", "4-man", "5-man"].forEach(x => {
+      const th = document.createElement("th"); th.textContent = x; head.appendChild(th);
+    });
+    tbl.appendChild(head);
+    books.forEach(b => {
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td"); td0.textContent = b; tr.appendChild(td0);
+      [2, 3, 4, 5].forEach(sz => {
+        const td = document.createElement("td");
+        const r = TL.record.find(x => x.book === b && x.size === sz);
+        td.textContent = r ? (r.w + "-" + r.l + (r.p ? "-" + r.p + "P" : "")) : "—";
+        tr.appendChild(td);
+      });
+      tbl.appendChild(tr);
+    });
+    document.getElementById("topLegsRecord").appendChild(tbl);
+  }
+}
+document.getElementById("meta").textContent =
+  DATA.date + " · vintage " + DATA.vintage_tag + " · updated " + (DATA.generated_at || "") + " · " + rows.length + " suggestions";
+const NFL = DATA.sport === "nfl";
+const EDITION = NFL ?
+  (DATA.group === "pre" || DATA.vintage_tag === "morning" ? "PRE edition (morning — ETR weekly set + ~11 AM board state)" :
+   DATA.group === "post" || DATA.vintage_tag === "prelock" ? "POST edition (pre-lock snapshot)" : "") :
+  DATA.group === "pre" ? "PRE-4PM edition (ETR set released before 4 PM CT)" :
+  DATA.group === "post" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
+  DATA.vintage_tag === "prelock" ? "POST-4PM edition (ETR set released after 4 PM CT)" :
+  (DATA.vintage_tag === "1100" || DATA.vintage_tag === "noon" ? "PRE-4PM edition (ETR set released before 4 PM CT)" : "");
+if (DATA.conf_note) document.getElementById("confNote").innerHTML = DATA.conf_note;
+if (EDITION) document.getElementById("meta").textContent += " · " + EDITION;
+if (DATA.summary) {
+  const o = DATA.summary.overall, c70 = DATA.summary.conf70;
+  document.getElementById("meta").textContent +=
+    " · GRADED: " + o.w + "-" + o.l + (o.p ? "-" + o.p + "P" : "") +
+    (o.hit_pct !== null && o.hit_pct !== undefined ? " (" + o.hit_pct + "% hit)" : "") +
+    (o.dnp ? " · " + o.dnp + " DNP" : "") +
+    " · Conf 70+: " + c70.w + "-" + c70.l +
+    (c70.hit_pct !== null && c70.hit_pct !== undefined ? " (" + c70.hit_pct + "%)" : "");
+}
+// Last updated / next update stamps + manual refresh (Daniel, Nov 5 2026).
+// The publisher injects next_update (and refresh_url, once the refresh
+// endpoint exists) into DATA on NBA pages; absent fields hide the row.
+(function () {
+  const rowEl = document.getElementById("refreshRow");
+  const stampsEl = document.getElementById("stamps");
+  const btn = document.getElementById("refreshBtn");
+  const msg = document.getElementById("refreshMsg");
+  function fmtCT(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " CT";
+  }
+  const parts = [];
+  if (DATA.generated_at) parts.push("Last updated " + fmtCT(DATA.generated_at));
+  if (DATA.next_update) parts.push("Next update " + DATA.next_update);
+  if (parts.length || DATA.refresh_url) {
+    rowEl.style.display = "flex";
+    stampsEl.textContent = parts.join(" · ");
+  }
+  if (DATA.refresh_url) {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      msg.textContent = "Requesting refresh…";
+      try {
+        const resp = await fetch(DATA.refresh_url, { method: "POST" });
+        const j = await resp.json();
+        msg.textContent = j.message || "Refresh requested.";
+      } catch (e) {
+        msg.textContent = "Refresh request failed — scheduled updates continue.";
+      }
+      setTimeout(() => { btn.disabled = false; }, 5000);
+    };
+  } else {
+    btn.style.display = "none";
+  }
+})();
+// Site tabs for EVERY book, always (Daniel, Nov 11 2026) — a page
+// whose rows happen to carry one book still shows all tabs; a book
+// with no rows on the page is dimmed and shows 0 rows when picked.
+// Any book present in rows but not in the canonical list is appended.
+const CANON_SITES = NFL ? ["Sleeper", "Underdog"] : ["PrizePicks", "Sleeper", "Underdog"];
+const sites = ["All", ...CANON_SITES, ...[...new Set(rows.map(r => r.book))].filter(b => !CANON_SITES.includes(b))];
+const markets = ["All", ...new Set(rows.map(r => r.market))];
+const tabs = document.getElementById("siteTabs");
+sites.forEach(s => {
+  const b = document.createElement("button");
+  b.textContent = s; if (s === "All") b.className = "active";
+  if (s !== "All" && !rows.some(r => r.book === s)) b.style.opacity = "0.45";
+  b.onclick = () => { site = s; [...tabs.children].forEach(x => x.classList.remove("active")); b.classList.add("active"); render(); };
+  tabs.appendChild(b);
+});
+const msel = document.getElementById("marketSel");
+markets.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m === "All" ? "All markets" : m; msel.appendChild(o); });
+msel.onchange = () => { market = msel.value; render(); };
+// One dropdown entry per distinct scenario on the page (Daniel,
+// Nov 10 2026), plus "No scenario" for the base rows. Hidden when
+// the page has no scenario rows at all.
+const ssel = document.getElementById("scenSel");
+const scenVals = [...new Set(rows.map(scenKey))];
+{
+  const o = document.createElement("option"); o.value = "All"; o.textContent = "All scenarios"; ssel.appendChild(o);
+  scenVals.filter(s => s).sort().forEach(s => { const o = document.createElement("option"); o.value = s; o.textContent = s; ssel.appendChild(o); });
+  if (scenVals.includes("")) { const o = document.createElement("option"); o.value = "__none__"; o.textContent = "No scenario"; ssel.appendChild(o); }
+  if (!scenVals.some(s => s)) ssel.style.display = "none";
+}
+ssel.onchange = () => { scen = ssel.value; render(); };
+document.getElementById("q").oninput = e => { query = e.target.value.toLowerCase(); render(); };
+const mc = document.getElementById("minConf");
+mc.oninput = () => { minConf = +mc.value; document.getElementById("minConfVal").textContent = mc.value; render(); };
+const head = document.getElementById("headRow");
+function headHTML(i) {
+  const [k, label] = COLS[i];
+  return label +
+    (k === sortKey ? ' <span class="dir">' + (sortDir === -1 ? "▼" : "▲") + "</span>" : "") +
+    (DEFS[k] ? ' <span class="info" data-def="' + k + '">?</span>' : "");
+}
+function wireInfo() {
+  head.querySelectorAll(".info").forEach(sp => {
+    sp.onclick = e => { e.stopPropagation(); showDef(sp.dataset.def); };
+  });
+}
+COLS.forEach(([key, label, num], i) => {
+  const th = document.createElement("th");
+  if (num) th.className = "num";
+  th.innerHTML = headHTML(i);
+  th.onclick = () => {
+    if (sortKey === key) sortDir = -sortDir; else { sortKey = key; sortDir = -1; }
+    [...head.children].forEach((h, j) => { h.innerHTML = headHTML(j); });
+    wireInfo();
+    render();
+  };
+  head.appendChild(th);
+});
+wireInfo();
+function shade(v) {
+  if (v === null || v === undefined) return "";
+  const a = Math.max(0, Math.min(0.55, (v - 50) / 70));
+  return ' style="background:rgba(74,222,128,' + a.toFixed(2) + ')"';
+}
+function resultCell(res) {
+  const map = { W: ["HIT", "hit"], L: ["MISS", "miss"], P: ["PUSH", "push"], DNP: ["DNP", "dnp"] };
+  const m = map[res] || [res || "", ""];
+  return '<td class="' + m[1] + '">' + m[0] + "</td>";
+}
+// Daily + rolling records at the Min confidence slider (Daniel, Nov 10 2026):
+// graded W-L, win% and total plays among rows at or above the slider —
+// daily from this page's own rows, rolling from the cumulative graded
+// counts through this page's date embedded by the publisher.
+function recStr(w, l, p) {
+  const plays = w + l + p;
+  let s = w + "-" + l;
+  if (w + l > 0) s += " (" + Math.round(100 * w / (w + l)) + "%)";
+  s += " · " + plays + " plays";
+  if (p > 0) s += " · " + p + " push" + (p > 1 ? "es" : "");
+  return s;
+}
+function updateRecords() {
+  const el = document.getElementById("confRecords");
+  if (!el) return;
+  let dw = 0, dl = 0, dp = 0;
+  if (GRADED) rows.forEach(r => {
+    if ((r.confidence ?? 0) >= minConf) {
+      if (r.result === "W") dw++; else if (r.result === "L") dl++; else if (r.result === "P") dp++;
+    }
+  });
+  let rw = 0, rl = 0, rp = 0;
+  const rb = DATA.rolling_by_conf;
+  if (rb) for (let c = Math.ceil(minConf); c <= 100; c++) {
+    if (rb[c]) { rw += rb[c][0]; rl += rb[c][1]; rp += rb[c][2]; }
+  }
+  const parts = ["Daily record: " + (GRADED ? recStr(dw, dl, dp) : "not graded yet")];
+  if (rb) parts.push("Rolling record: " + recStr(rw, rl, rp));
+  el.textContent = parts.join("   ·   ");
+}
+function render() {
+  let out = rows.filter(r =>
+    (site === "All" || r.book === site) &&
+    (market === "All" || r.market === market) &&
+    (scen === "All" || (scen === "__none__" ? scenKey(r) === "" : scenKey(r) === scen)) &&
+    (r.confidence >= minConf) &&
+    (!query || (r.player + " " + r.matchup).toLowerCase().includes(query)));
+  out.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (typeof x === "number" && typeof y === "number") return (x - y) * sortDir;
+    return String(x).localeCompare(String(y)) * sortDir;
+  });
+  document.getElementById("count").textContent = out.length + " rows shown";
+  updateRecords();
+  document.getElementById("bodyRows").innerHTML = out.map(r =>
+    "<tr>" +
+    "<td>" + r.player + "</td><td>" + r.matchup + "</td><td>" + r.book + "</td><td>" + r.market + "</td>" +
+    '<td class="num">' + r.line + "</td>" +
+    '<td class="' + (r.side === "MORE" ? "more" : "less") + '">' + r.side + "</td>" +
+    '<td class="num">' + r.forecast + "</td>" +
+    (HASADJ ? '<td class="num">' + (r.exp_change_pct !== null && r.exp_change_pct !== undefined ? r.etr_now + " (" + (r.exp_change_pct >= 0 ? "+" : "") + r.exp_change_pct + "%)" : "") + "</td>" : "") +
+    '<td class="num">' + r.difference + "</td>" +
+    (GRADED ? '<td class="num">' + (r.actual ?? "") + "</td>" + resultCell(r.result) : "") +
+    '<td class="num score"' + shade(r.confidence) + ">" + (r.confidence ?? "—") + "</td>" +
+    (HASREC ? '<td class="num">' + (r.rec_confidence ?? "") + "</td>" : "") +
+    '<td class="num score"' + shade(r.matchup_score) + ">" + (r.matchup_score ?? "") + "</td>" +
+    "<td>" + r.agree + "</td>" +
+    '<td class="scen">' + dispScen(r) + "</td>" +
+    (GRADED ? "<td>" + (r.vintage || "") + "</td>" : "") +
+    "</tr>").join("");
+}
+document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pre.html\">2026-11-05 pre</a> \u00b7 <a href=\"2026-11-05-post.html\">2026-11-05 post</a> \u00b7 <a href=\"2026-11-08-pre.html\">2026-11-08 pre</a> \u00b7 <a href=\"2026-11-08-post.html\">2026-11-08 post</a> \u00b7 <a href=\"2026-11-09-pre.html\">2026-11-09 pre</a> \u00b7 <a href=\"2026-11-09-post.html\">2026-11-09 post</a> \u00b7 <a href=\"2026-11-12-pre.html\">2026-11-12</a>";
+document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a><div class=\"cal-rec\">Pre 24-19 \u00b7 56%</div><div class=\"cal-rec\">Post 28-10 \u00b7 74%</div></td><td>6</td><td>7</td><td><a href=\"2026-11-08-pre.html\">8</a><div class=\"cal-rec\">Pre 183-127 \u00b7 59%</div><div class=\"cal-rec\">Post 183-127 \u00b7 59%</div></td></tr><tr><td><a href=\"2026-11-09-pre.html\">9</a></td><td>10</td><td>11</td><td><a href=\"2026-11-12-pre.html\">12</a></td><td>13</td><td>14</td><td>15</td></tr><tr><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
+document.getElementById("sportNav").innerHTML = "<button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button>";
+render();
+</script>
+</body>
+</html>
