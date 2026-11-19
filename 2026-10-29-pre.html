@@ -83,6 +83,7 @@
   <div id="topLegs" hidden>
     <h2>Top Legs <span class="betatag" id="topLegsTag">BETA</span></h2>
     <p class="sub" id="topLegsBeta"></p>
+    <p class="sub" id="topLegsChange"></p>
     <div id="topLegsSlips"></div>
     <h3 id="topLegsRecHead" hidden>Rolling record</h3>
     <div id="topLegsRecord"></div>
@@ -150,6 +151,14 @@ if (TL && ((TL.slips || []).length || (TL.record || []).length)) {
   document.getElementById("topLegsBeta").textContent = TL.beta
     ? "BETA — testing only, not for real money yet. The rolling record resets when this leaves beta; beta slips stay in the log for calibration study."
     : "Rolling record counts slips issued since launch.";
+  if (TL.change_date) {
+    document.getElementById("topLegsChange").textContent =
+      "Rule change — Nov 19, 2026: the top 2 picks on each site now use different players " +
+      "(the same player can't be a top pick on two sites), and a player whose line dropped " +
+      "a lot during the day — often a sign he might be hurt — can't be a top-2 pick. " +
+      "The record below is shown three ways: before the change, after the change, and total. " +
+      "The after record is new, so it starts small.";
+  }
   const byBook = {};
   (TL.slips || []).forEach(s => { (byBook[s.book] = byBook[s.book] || []).push(s); });
   const wrap = document.getElementById("topLegsSlips");
@@ -173,6 +182,12 @@ if (TL && ((TL.slips || []).length || (TL.record || []).length)) {
         }
         li.textContent = txt;
         ul.appendChild(li);
+        if (lg.anchor_note) {
+          const an = document.createElement("li");
+          an.className = "tlflag";
+          an.textContent = "↳ " + lg.anchor_note;
+          ul.appendChild(an);
+        }
         (lg.flags || []).forEach(f => {
           const fl = document.createElement("li");
           fl.className = "tlflag";
@@ -186,26 +201,42 @@ if (TL && ((TL.slips || []).length || (TL.record || []).length)) {
   });
   if ((TL.record || []).length) {
     document.getElementById("topLegsRecHead").hidden = false;
-    const books = [...new Set(TL.record.map(r => r.book))].sort();
-    const tbl = document.createElement("table");
-    tbl.className = "tlrec";
-    const head = document.createElement("tr");
-    ["Site", "2-man", "3-man", "4-man", "5-man"].forEach(x => {
-      const th = document.createElement("th"); th.textContent = x; head.appendChild(th);
-    });
-    tbl.appendChild(head);
-    books.forEach(b => {
-      const tr = document.createElement("tr");
-      const td0 = document.createElement("td"); td0.textContent = b; tr.appendChild(td0);
-      [2, 3, 4, 5].forEach(sz => {
-        const td = document.createElement("td");
-        const r = TL.record.find(x => x.book === b && x.size === sz);
-        td.textContent = r ? (r.w + "-" + r.l + (r.p ? "-" + r.p + "P" : "")) : "—";
-        tr.appendChild(td);
+    const recBooks = [...new Set(TL.record.map(r => r.book))].sort();
+    const recTable = (rec, label) => {
+      const wrap = document.createElement("div");
+      const cap = document.createElement("p");
+      cap.className = "sub";
+      cap.textContent = label;
+      wrap.appendChild(cap);
+      const tbl = document.createElement("table");
+      tbl.className = "tlrec";
+      const head = document.createElement("tr");
+      ["Site", "2-man", "3-man", "4-man", "5-man"].forEach(x => {
+        const th = document.createElement("th"); th.textContent = x; head.appendChild(th);
       });
-      tbl.appendChild(tr);
-    });
-    document.getElementById("topLegsRecord").appendChild(tbl);
+      tbl.appendChild(head);
+      recBooks.forEach(b => {
+        const tr = document.createElement("tr");
+        const td0 = document.createElement("td"); td0.textContent = b; tr.appendChild(td0);
+        [2, 3, 4, 5].forEach(sz => {
+          const td = document.createElement("td");
+          const r = (rec || []).find(x => x.book === b && x.size === sz);
+          td.textContent = r ? (r.w + "-" + r.l + (r.p ? "-" + r.p + "P" : "")) : "—";
+          tr.appendChild(td);
+        });
+        tbl.appendChild(tr);
+      });
+      wrap.appendChild(tbl);
+      return wrap;
+    };
+    const recWrap = document.getElementById("topLegsRecord");
+    if (TL.change_date) {
+      recWrap.appendChild(recTable(TL.record_pre, "Before the change (through Nov 18)"));
+      recWrap.appendChild(recTable(TL.record_post, "After the change (Nov 19 on)"));
+      recWrap.appendChild(recTable(TL.record, "Total"));
+    } else {
+      recWrap.appendChild(recTable(TL.record, ""));
+    }
   }
 }
 document.getElementById("meta").textContent =
