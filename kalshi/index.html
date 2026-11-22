@@ -22,16 +22,21 @@
   .up { color:#4ade80; } .down { color:#f87171; } .flat { color:#9aa7b4; }
   .fc { color:#c8d2dd; }
   .alert { background:#241a12; border:1px solid #6b4e2e; border-radius:6px; padding:7px 10px; margin:0 0 6px; font-size:14px; }
+  .bl { margin:0; padding-left:16px; }
+  .sliderrow { font-size:13px; color:#c8d2dd; margin:4px 0 8px; }
+  .sliderrow input[type=range] { width:180px; vertical-align:middle; }
   .none { color:#9aa7b4; font-size:14px; }
   .foot { color:#9aa7b4; font-size:12px; margin-top:16px; }
 </style>
 </head>
 <body>
-  <div class="sportnav"><button onclick="location.href='../index.html'">NBA</button><button onclick="location.href='../nfl/index.html'">NFL</button><button class="active">KALSHI</button></div>
+  <div class="sportnav"><button onclick="location.href='../index.html'">PROP APPS</button><button class="active">KALSHI</button></div>
   <div class="subnav"><button class="active">NBA</button><button onclick="location.href='nfl.html'">NFL</button></div>
   <h1>Kalshi — NBA Points Milestones</h1>
   <p class="sub">284 markets tracked for 2026-11-22 · prices as of 7:53 AM CT.</p>
   <div class="banner">Paper test, Nov 22 – Dec 6, 2026 — this page mirrors the Kalshi/Poly channel's news-repricing watch: every NBA points-milestone market the detector is tracking, the price it sees, and our own points forecast next to it. Prices are Kalshi yes bids in cents. Nothing here places a trade.</div>
+
+  <h2>Recommended Bets</h2><p class="sub">Rolling record: no graded picks yet — grading starts tomorrow. Model picks — unproven, issued once a day and graded the next morning, same as the rest of the board.</p><div class="sliderrow">Min confidence <input type="range" id="kConf" min="0" max="95" step="1" value="0"> <span id="kConfVal">0</span> · <span id="kAtRec"></span></div><p class="none">No recommended bets issued for today yet — they post once today's sheet and prices are both in.</p><script>var KHIST=[];(function(){var s=document.getElementById("kConf"),v=document.getElementById("kConfVal"),at=document.getElementById("kAtRec");function upd(){var t=+s.value;v.textContent=t;document.querySelectorAll("#kRecs tr[data-conf]").forEach(function(r){r.style.display=(+r.getAttribute("data-conf")>=t)?"":"none";});var w=0,l=0;KHIST.forEach(function(h){if(h.c>=t){if(h.r==="W")w++;else if(h.r==="L")l++;}});at.textContent=(w+l)?("record at ≥"+t+" conf: "+w+"-"+l+" ("+Math.round(100*w/(w+l))+"%)"):"no graded picks at this confidence yet";}s.addEventListener("input",upd);upd();})();</script>
 
   <h2>⚡ Repricing alerts</h2>
   <p class="none">No repricing alerts fired yet today. The detector polls every 2 minutes from 11 AM CT and stays silent unless a beneficiary market jumps.</p>
