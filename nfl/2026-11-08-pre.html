@@ -16,10 +16,10 @@
   .tlflag { color:#ffb020; }
   .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
   .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
-  .tabs button, .sportnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
+  .tabs button, .sportnav button, .subnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
   #refreshBtn { cursor:pointer; } #refreshBtn:disabled { opacity:.5; cursor:default; }
-  .tabs button.active, .sportnav button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
-  .sportnav { margin:2px 0 8px; display:flex; gap:8px; }
+  .tabs button.active, .sportnav button.active, .subnav button.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .sportnav, .subnav { margin:2px 0 8px; display:flex; gap:8px; }
   label { font-size:13px; color:#9aa4b2; }
   main { max-width:1200px; margin:0 auto; padding:0 16px 24px; overflow-x:auto; }
   table { border-collapse:collapse; width:100%; font-size:14px; }
@@ -55,7 +55,7 @@
 <body>
 <header>
   <h1>ADFS PROPS</h1>
-  <div class="sportnav" id="sportNav"></div>
+  <div id="sportNav"></div>
   <div class="sub"><span id="meta"></span><span class="infolink" id="vintageHelp">what's a vintage?</span></div>
   <div id="explainer"></div>
   <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
@@ -429,7 +429,7 @@ function render() {
 }
 document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pre.html\">2026-11-05 pre</a> \u00b7 <a href=\"2026-11-05-post.html\">2026-11-05 post</a> \u00b7 <a href=\"2026-11-08-pre.html\">2026-11-08 pre</a> \u00b7 <a href=\"2026-11-08-post.html\">2026-11-08 post</a> \u00b7 <a href=\"2026-11-09-pre.html\">2026-11-09 pre</a> \u00b7 <a href=\"2026-11-09-post.html\">2026-11-09 post</a> \u00b7 <a href=\"2026-11-12-pre.html\">2026-11-12 pre</a> \u00b7 <a href=\"2026-11-12-post.html\">2026-11-12 post</a> \u00b7 <a href=\"2026-11-15-pre.html\">2026-11-15 pre</a> \u00b7 <a href=\"2026-11-15-post.html\">2026-11-15 post</a> \u00b7 <a href=\"2026-11-16-pre.html\">2026-11-16 pre</a> \u00b7 <a href=\"2026-11-16-post.html\">2026-11-16 post</a> \u00b7 <a href=\"2026-11-19-pre.html\">2026-11-19 pre</a> \u00b7 <a href=\"2026-11-19-post.html\">2026-11-19 post</a> \u00b7 <a href=\"2026-11-22-pre.html\">2026-11-22</a>";
 document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a><div class=\"cal-rec\">Pre 24-19 \u00b7 56%</div><div class=\"cal-rec\">Post 28-10 \u00b7 74%</div></td><td>6</td><td>7</td><td><a href=\"2026-11-08-pre.html\">8</a><div class=\"cal-rec\">Pre 183-127 \u00b7 59%</div><div class=\"cal-rec\">Post 183-127 \u00b7 59%</div></td></tr><tr><td><a href=\"2026-11-09-pre.html\">9</a></td><td>10</td><td>11</td><td><a href=\"2026-11-12-pre.html\">12</a><div class=\"cal-rec\">Pre 23-25 \u00b7 48%</div><div class=\"cal-rec\">Post 24-26 \u00b7 48%</div></td><td>13</td><td>14</td><td><a href=\"2026-11-15-pre.html\">15</a><div class=\"cal-rec\">Pre 290-276 \u00b7 51%</div><div class=\"cal-rec\">Post 291-279 \u00b7 51%</div></td></tr><tr><td><a href=\"2026-11-16-pre.html\">16</a><div class=\"cal-rec\">Pre 27-12 \u00b7 69%</div><div class=\"cal-rec\">Post 25-15 \u00b7 62%</div></td><td>17</td><td>18</td><td><a href=\"2026-11-19-pre.html\">19</a><div class=\"cal-rec\">Pre 24-37 \u00b7 39%</div><div class=\"cal-rec\">Post 22-37 \u00b7 37%</div></td><td>20</td><td>21</td><td><a href=\"2026-11-22-pre.html\">22</a></td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
-document.getElementById("sportNav").innerHTML = "<button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button><button onclick=\"location.href='../kalshi/index.html'\">KALSHI</button>";
+document.getElementById("sportNav").innerHTML = "<div class=\"sportnav\"><button onclick=\"location.href='../index.html'\">PROP APPS</button><button onclick=\"location.href='../kalshi/index.html'\">KALSHI</button></div><div class=\"subnav\"><button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button></div>";
 render();
 </script>
 </body>
