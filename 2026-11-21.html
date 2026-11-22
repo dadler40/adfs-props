@@ -43,6 +43,10 @@
   table.cal a { color:#7db4ff; text-decoration:none; font-weight:700; font-size:14px; }
   .cal-rec { font-size:10px; color:#9aa4b2; white-space:nowrap; }
   .recline { margin-left:16px; color:#e6ebf2; font-weight:600; white-space:nowrap; }
+  .inj { font-size:11px; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:6px; white-space:nowrap; }
+  .inj.out { background:#5b1a1a; color:#f87171; }
+  .inj.doubt { background:#5b3413; color:#fbbf24; }
+  .inj.q { background:#4a3f13; color:#fde68a; }
   .hit { color:#4ade80; font-weight:700; } .miss { color:#f87171; font-weight:700; }
   .push { color:#9aa4b2; font-weight:700; } .dnp { color:#5b6572; font-weight:700; }
   .info { display:inline-block; margin-left:5px; width:15px; height:15px; line-height:15px; text-align:center; border:1px solid #4a5568; border-radius:50%; color:#9ec1ff; font-size:11px; cursor:pointer; vertical-align:1px; }
@@ -412,7 +416,7 @@ function render() {
   updateRecords();
   document.getElementById("bodyRows").innerHTML = out.map(r =>
     "<tr>" +
-    "<td>" + r.player + "</td><td>" + r.matchup + "</td><td>" + r.book + "</td><td>" + r.market + "</td>" +
+    "<td>" + r.player + (r.inj ? ' <span class="inj ' + r.inj.inj_cls + '">' + r.inj.inj + "</span>" : "") + "</td><td>" + r.matchup + "</td><td>" + r.book + "</td><td>" + r.market + "</td>" +
     '<td class="num">' + r.line + "</td>" +
     '<td class="' + (r.side === "MORE" ? "more" : "less") + '">' + r.side + "</td>" +
     '<td class="num">' + r.forecast + "</td>" +
