@@ -14,7 +14,18 @@
   .tlrec th, .tlrec td { padding:2px 10px 2px 0; text-align:left; }
   #topLegs ul { margin:4px 0 10px 18px; padding:0; }
   .tlflag { color:#ffb020; }
-  .pilot { background:#3a2f10; border:1px solid #a97e12; color:#ffd75e; border-radius:8px; padding:8px 12px; margin:12px 0; font-size:13px; }
+  .pilot { background:#141a21; border:1px solid #232a34; color:#9aa4b2; border-radius:8px; padding:6px 10px; margin:10px 0; font-size:12.5px; }
+  #recs { margin:2px 0 16px; }
+  #recs h2 { font-size:19px; margin:4px 0 10px; letter-spacing:.3px; }
+  .recgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(235px,1fr)); gap:10px; }
+  .rec { background:#161c24; border:1px solid #2a3340; border-radius:10px; padding:10px 12px; }
+  .rec .rp { font-size:16px; font-weight:700; }
+  .rec .rm { color:#9aa4b2; font-size:12px; margin-top:1px; }
+  .rec .rl { font-size:15px; margin-top:7px; font-weight:600; }
+  .rec .rc { float:right; background:#2563eb; color:#fff; border-radius:6px; padding:1px 8px; font-weight:700; font-size:14px; }
+  .rec .rf { color:#9aa4b2; font-size:12px; margin-top:4px; }
+  details.howto { margin-top:12px; }
+  details.howto summary { cursor:pointer; color:#7db4ff; font-size:13px; }
   .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; }
   .tabs button, .sportnav button, .subnav button, select, input[type=search], #refreshBtn { background:#1a1f27; color:#e6e9ee; border:1px solid #333c48; border-radius:6px; padding:6px 10px; font-size:14px; }
   #refreshBtn { cursor:pointer; } #refreshBtn:disabled { opacity:.5; cursor:default; }
@@ -62,7 +73,7 @@
   <div id="sportNav"></div>
   <div class="sub"><span id="meta"></span><span class="infolink" id="vintageHelp">what's a vintage?</span></div>
   <div id="explainer"></div>
-  <div class="pilot">PILOT — unproven. These are model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning (hit rate, CLV, per-stat accuracy); the track record is what earns trust.</div>
+  <div class="pilot">PILOT — model suggestions from a graded experiment, not a proven edge. Every row is graded the next morning.</div>
   <div class="controls" id="refreshRow" style="display:none">
     <button id="refreshBtn" type="button">&#8635; Refresh now</button>
     <span class="sub" id="refreshMsg"></span>
@@ -77,9 +88,12 @@
     <span class="recline" id="confRecords"></span>
   </div>
   <div class="count" id="count"></div>
-  <div id="calendar"></div>
 </header>
 <main>
+  <section id="recs" hidden>
+    <h2>Recommended Bets</h2>
+    <div class="recgrid" id="recGrid"></div>
+  </section>
   <table id="board">
     <thead><tr id="headRow"></tr></thead>
     <tbody id="bodyRows"></tbody>
@@ -94,11 +108,15 @@
   </div>
 </main>
 <footer>
+  <div id="calendar"></div>
+  <details class="howto">
+  <summary>How to read this board</summary>
   <p id="confNote"><strong>Confidence</strong> (0–100): pilot model score — the probability implied by the forecast's difference vs the graded per-market error, widened when the three estimators disagree, capped at 85 until calibrated, and capped at 59 when a row depends on an unresolved injury scenario. Not yet a calibrated hit rate.</p>
   <p id="adjNote" hidden><strong>ETR now (Δ exp)</strong>: on pre-final issues the Forecast is the best guess at the FINAL ETR number. This column shows the current ETR projection and the total expected move into the final set — ETR's morning→final drift plus a per-player adjustment when the day's injury news implies one. At the pre-lock issue the final set is in and the column disappears.</p>
   <p id="recNote" hidden><strong>Rec. Conf</strong> (recommended confidence): the hit rate of graded rows issued in the same market at the same model-confidence band, shrunk toward 50% — it is what the graded record says a score like this has actually been worth. Appears once a band has 10+ graded rows, and sharpens as more slates grade out.</p>
   <p><strong>Matchup Score</strong> (0–100): 60% game environment (both teams' total projected fantasy points, ranked against today's other games) + 40% the player's share of his own team's projection. Higher = better environment for his number.</p>
   <p><strong>Difference</strong>: our forecast minus the site's line, in points (absolute). <strong>Agree</strong>: whether all three estimators (A/B/C) land on the same side of the line.</p>
+  </details>
   <p id="archive"></p>
 </footer>
 <script>
@@ -432,8 +450,34 @@ function render() {
     "</tr>").join("");
 }
 document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pre.html\">2026-11-05 pre</a> \u00b7 <a href=\"2026-11-05-post.html\">2026-11-05 post</a> \u00b7 <a href=\"2026-11-08-pre.html\">2026-11-08 pre</a> \u00b7 <a href=\"2026-11-08-post.html\">2026-11-08 post</a> \u00b7 <a href=\"2026-11-09-pre.html\">2026-11-09 pre</a> \u00b7 <a href=\"2026-11-09-post.html\">2026-11-09 post</a> \u00b7 <a href=\"2026-11-12-pre.html\">2026-11-12 pre</a> \u00b7 <a href=\"2026-11-12-post.html\">2026-11-12 post</a> \u00b7 <a href=\"2026-11-15-pre.html\">2026-11-15 pre</a> \u00b7 <a href=\"2026-11-15-post.html\">2026-11-15 post</a> \u00b7 <a href=\"2026-11-16-pre.html\">2026-11-16 pre</a> \u00b7 <a href=\"2026-11-16-post.html\">2026-11-16 post</a> \u00b7 <a href=\"2026-11-19-pre.html\">2026-11-19 pre</a> \u00b7 <a href=\"2026-11-19-post.html\">2026-11-19 post</a> \u00b7 <a href=\"2026-11-22-pre.html\">2026-11-22 pre</a> \u00b7 <a href=\"2026-11-22-post.html\">2026-11-22 post</a>";
-document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a><div class=\"cal-rec\">Pre 24-19 \u00b7 56%</div><div class=\"cal-rec\">Post 28-10 \u00b7 74%</div></td><td>6</td><td>7</td><td><a href=\"2026-11-08-pre.html\">8</a><div class=\"cal-rec\">Pre 183-127 \u00b7 59%</div><div class=\"cal-rec\">Post 183-127 \u00b7 59%</div></td></tr><tr><td><a href=\"2026-11-09-pre.html\">9</a></td><td>10</td><td>11</td><td><a href=\"2026-11-12-pre.html\">12</a><div class=\"cal-rec\">Pre 23-25 \u00b7 48%</div><div class=\"cal-rec\">Post 24-26 \u00b7 48%</div></td><td>13</td><td>14</td><td><a href=\"2026-11-15-pre.html\">15</a><div class=\"cal-rec\">Pre 290-276 \u00b7 51%</div><div class=\"cal-rec\">Post 291-279 \u00b7 51%</div></td></tr><tr><td><a href=\"2026-11-16-pre.html\">16</a><div class=\"cal-rec\">Pre 27-12 \u00b7 69%</div><div class=\"cal-rec\">Post 25-15 \u00b7 62%</div></td><td>17</td><td>18</td><td><a href=\"2026-11-19-pre.html\">19</a><div class=\"cal-rec\">Pre 24-37 \u00b7 39%</div><div class=\"cal-rec\">Post 22-37 \u00b7 37%</div></td><td>20</td><td>21</td><td><a href=\"2026-11-22-pre.html\">22</a></td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
-document.getElementById("sportNav").innerHTML = "<div class=\"sportnav\"><button onclick=\"location.href='../index.html'\">PROP APPS</button><button onclick=\"location.href='../kalshi/index.html'\">KALSHI</button><button onclick=\"location.href='../polymarket/index.html'\">POLYMARKET</button><button onclick=\"location.href='../arb/index.html'\">ARB</button></div><div class=\"subnav\"><button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button></div>";
+document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a><div class=\"cal-rec\">Pre 24-19 \u00b7 56%</div><div class=\"cal-rec\">Post 28-10 \u00b7 74%</div></td><td>6</td><td>7</td><td><a href=\"2026-11-08-pre.html\">8</a><div class=\"cal-rec\">Pre 183-127 \u00b7 59%</div><div class=\"cal-rec\">Post 183-127 \u00b7 59%</div></td></tr><tr><td><a href=\"2026-11-09-pre.html\">9</a></td><td>10</td><td>11</td><td><a href=\"2026-11-12-pre.html\">12</a><div class=\"cal-rec\">Pre 23-25 \u00b7 48%</div><div class=\"cal-rec\">Post 24-26 \u00b7 48%</div></td><td>13</td><td>14</td><td><a href=\"2026-11-15-pre.html\">15</a><div class=\"cal-rec\">Pre 290-276 \u00b7 51%</div><div class=\"cal-rec\">Post 291-279 \u00b7 51%</div></td></tr><tr><td><a href=\"2026-11-16-pre.html\">16</a><div class=\"cal-rec\">Pre 27-12 \u00b7 69%</div><div class=\"cal-rec\">Post 25-15 \u00b7 62%</div></td><td>17</td><td>18</td><td><a href=\"2026-11-19-pre.html\">19</a><div class=\"cal-rec\">Pre 24-37 \u00b7 39%</div><div class=\"cal-rec\">Post 22-37 \u00b7 37%</div></td><td>20</td><td>21</td><td><a href=\"2026-11-22-pre.html\">22</a><div class=\"cal-rec\">Pre 400-380 \u00b7 51%</div><div class=\"cal-rec\">Post 316-313 \u00b7 50%</div></td></tr><tr><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
+document.getElementById("sportNav").innerHTML = "<div class=\"sportnav\"><button onclick=\"location.href='../index.html'\">PROP APPS</button><button onclick=\"location.href='../kalshi/index.html'\">KALSHI</button><button onclick=\"location.href='../polymarket/index.html'\">POLYMARKET</button><button onclick=\"location.href='../arb/index.html'\">ARB SPORTS</button><button onclick=\"location.href='../arb/all.html'\">ARB ALL</button></div><div class=\"subnav\"><button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button></div>";
+// Recommended Bets (Daniel, Nov 22 2026): the day's top picks at the
+// very top of the page — highest confidence per player+market across
+// books, top 8. Live pages only; graded archive pages keep their
+// record-first layout.
+const MKT_FULL = {FP: "Fantasy Points", PTS: "Points", REB: "Rebounds", AST: "Assists", PRA: "PRA"};
+function buildRecs() {
+  if (GRADED || !(DATA.rows || []).length) return;
+  const best = {};
+  for (const r of DATA.rows) {
+    const k = r.player + "|" + r.market;
+    if (!best[k] || r.confidence > best[k].confidence ||
+        (r.confidence === best[k].confidence && r.difference > best[k].difference)) best[k] = r;
+  }
+  const top = Object.values(best)
+    .sort((a, b) => b.confidence - a.confidence || b.difference - a.difference)
+    .slice(0, 8);
+  if (!top.length) return;
+  document.getElementById("recGrid").innerHTML = top.map(r =>
+    '<div class="rec"><span class="rc">' + r.confidence + "</span>" +
+    '<div class="rp">' + r.player + (r.inj ? ' <span class="inj ' + r.inj.inj_cls + '">' + r.inj.inj + "</span>" : "") + "</div>" +
+    '<div class="rm">' + r.matchup + " · " + r.book + "</div>" +
+    '<div class="rl"><span class="' + (r.side === "MORE" ? "more" : "less") + '">' + r.side + "</span> " + r.line + " " + (MKT_FULL[r.market] || r.market) + "</div>" +
+    '<div class="rf">Forecast ' + r.forecast + " · diff " + r.difference + (r.rec_confidence != null ? " · Rec. Conf " + r.rec_confidence : "") + "</div></div>").join("");
+  document.getElementById("recs").hidden = false;
+}
+buildRecs();
 render();
 </script>
 </body>
