@@ -453,21 +453,30 @@ document.getElementById("archive").innerHTML = "Archive: <a href=\"2026-11-05-pr
 document.getElementById("calendar").innerHTML = "<div class=\"cal-month\"><h3>November 2026</h3><table class=\"cal\"><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr><tr><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td>1</td></tr><tr><td>2</td><td>3</td><td>4</td><td><a href=\"2026-11-05-pre.html\">5</a><div class=\"cal-rec\">Pre 24-19 \u00b7 56%</div><div class=\"cal-rec\">Post 28-10 \u00b7 74%</div></td><td>6</td><td>7</td><td><a href=\"2026-11-08-pre.html\">8</a><div class=\"cal-rec\">Pre 183-127 \u00b7 59%</div><div class=\"cal-rec\">Post 183-127 \u00b7 59%</div></td></tr><tr><td><a href=\"2026-11-09-pre.html\">9</a></td><td>10</td><td>11</td><td><a href=\"2026-11-12-pre.html\">12</a><div class=\"cal-rec\">Pre 23-25 \u00b7 48%</div><div class=\"cal-rec\">Post 24-26 \u00b7 48%</div></td><td>13</td><td>14</td><td><a href=\"2026-11-15-pre.html\">15</a><div class=\"cal-rec\">Pre 290-276 \u00b7 51%</div><div class=\"cal-rec\">Post 291-279 \u00b7 51%</div></td></tr><tr><td><a href=\"2026-11-16-pre.html\">16</a><div class=\"cal-rec\">Pre 27-12 \u00b7 69%</div><div class=\"cal-rec\">Post 25-15 \u00b7 62%</div></td><td>17</td><td>18</td><td><a href=\"2026-11-19-pre.html\">19</a><div class=\"cal-rec\">Pre 24-37 \u00b7 39%</div><div class=\"cal-rec\">Post 22-37 \u00b7 37%</div></td><td>20</td><td>21</td><td><a href=\"2026-11-22-pre.html\">22</a><div class=\"cal-rec\">Pre 400-380 \u00b7 51%</div><div class=\"cal-rec\">Post 316-313 \u00b7 50%</div></td></tr><tr><td><a href=\"2026-11-23-pre.html\">23</a><div class=\"cal-rec\">Pre 29-23 \u00b7 56%</div><div class=\"cal-rec\">Post 27-26 \u00b7 51%</div></td><td>24</td><td>25</td><td><a href=\"2026-11-26-pre.html\">26</a><div class=\"cal-rec\">Pre 93-45 \u00b7 67%</div><div class=\"cal-rec\">Post 28-17 \u00b7 62%</div></td><td>27</td><td>28</td><td>29</td></tr><tr><td>30</td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td><td class=\"off\"></td></tr></table></div>";
 document.getElementById("sportNav").innerHTML = "<div class=\"sportnav\"><button onclick=\"location.href='../index.html'\">PROP APPS</button><button onclick=\"location.href='../kalshi/index.html'\">KALSHI</button><button onclick=\"location.href='../polymarket/index.html'\">POLYMARKET</button><button onclick=\"location.href='../arb/index.html'\">ARB SPORTS</button><button onclick=\"location.href='../arb/all.html'\">ARB ALL</button></div><div class=\"subnav\"><button onclick=\"location.href='../index.html'\">NBA</button><button class=\"active\">NFL</button></div>";
 // Recommended Bets (Daniel, Nov 22 2026): the day's top picks at the
-// very top of the page — highest confidence per player+market across
-// books, top 8. Live pages only; graded archive pages keep their
-// record-first layout.
+// very top of the page, top 8. Live pages only; graded archive pages
+// keep their record-first layout.
+// CALIBRATION RANKING (Daniel, Nov 28 2026): the heuristic
+// confidence score grades flat (52-54% at every band), so cards now
+// rank on the empirical (market, side) hit rate the publisher
+// stamps as emp_rate. Rows stamped gate:true (NFL rushing volume,
+// NBA REB MORE — buckets grading under 47%) never appear; rows
+// stamped trap:true (|edge| >= 5, the ~50% bucket) sort below every
+// non-trap row.
 const MKT_FULL = {FP: "Fantasy Points", PTS: "Points", REB: "Rebounds", AST: "Assists", PRA: "PRA"};
 function buildRecs() {
   if (GRADED || !(DATA.rows || []).length) return;
+  const key = r => [r.trap ? 1 : 0, -(r.emp_rate ?? 50),
+                    -(r.confidence ?? 0), -Math.abs(r.difference ?? 0)];
+  const cmp = (a, b) => { const ka = key(a), kb = key(b);
+    for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    return 0; };
   const best = {};
   for (const r of DATA.rows) {
+    if (r.gate) continue;
     const k = r.player + "|" + r.market;
-    if (!best[k] || r.confidence > best[k].confidence ||
-        (r.confidence === best[k].confidence && r.difference > best[k].difference)) best[k] = r;
+    if (!best[k] || cmp(r, best[k]) < 0) best[k] = r;
   }
-  const top = Object.values(best)
-    .sort((a, b) => b.confidence - a.confidence || b.difference - a.difference)
-    .slice(0, 8);
+  const top = Object.values(best).sort(cmp).slice(0, 8);
   if (!top.length) return;
   document.getElementById("recGrid").innerHTML = top.map(r =>
     '<div class="rec"><span class="rc">' + r.confidence + "</span>" +
